@@ -1,0 +1,141 @@
+package io.github.whdt.db.property
+
+import com.mongodb.client.MongoCollection
+import com.mongodb.client.MongoDatabase
+import com.mongodb.client.model.Filters.*
+import io.github.whdt.core.hdt.model.id.HdtId
+import io.github.whdt.core.hdt.model.property.Property
+import io.github.whdt.core.hdt.model.property.PropertyValue
+import io.github.whdt.query.ComparisonOperator
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+import org.bson.Document
+import org.bson.conversions.Bson
+import org.bson.types.ObjectId
+
+@Serializable
+data class PropertyDocument(
+    val hdtId: HdtId,
+    val propertyName: String,
+    val valueMap: Map<String, PropertyValue>
+    ) {
+    fun toDocument(): Document = Document.parse(Json.encodeToString(serializer(), this))
+    fun toWhdtProperty(): Property = Property(name = this.propertyName, id = this.propertyName, description ="" , valueMap = this.valueMap)
+
+    companion object {
+        fun fromWhdtProperty(hdtId: HdtId, property: Property): PropertyDocument {
+            return PropertyDocument(hdtId = hdtId, propertyName = property.name, valueMap = property.valueMap)
+        }
+        fun fromDocument(document: Document): PropertyDocument {
+            val copy = Document(document)
+            copy.remove("_id")
+            return Json.decodeFromString(serializer(), copy.toJson())
+        }
+    }
+}
+
+class PropertyService(private val database: MongoDatabase) {
+    var collection: MongoCollection<Document>
+
+    init {
+        database.createCollection("properties")
+        collection = database.getCollection("properties")
+    }
+
+    suspend fun create(hdtId: HdtId, property: Property): String = withContext(Dispatchers.IO) {
+        val propertyDoc = PropertyDocument.fromWhdtProperty(hdtId, property)
+        val doc = propertyDoc.toDocument()
+        collection.insertOne(doc)
+        doc["_id"].toString()
+    }
+
+    suspend fun read(id: String): PropertyDocument? = withContext(Dispatchers.IO) {
+        collection.find(eq("_id", ObjectId(id))).first()?.let(PropertyDocument::fromDocument)
+    }
+
+    suspend fun delete(id: String): Document? = withContext(Dispatchers.IO) {
+        collection.findOneAndDelete(eq("_id", ObjectId(id)))
+    }
+
+    suspend fun findAll(): List<PropertyDocument> = withContext(Dispatchers.IO) {
+        collection.find().toList().map { PropertyDocument.fromDocument(it) }.toList()
+    }
+
+    suspend fun findByName(propertyName: String): List<PropertyDocument> = withContext(Dispatchers.IO) {
+        findAll().filter { it.propertyName == propertyName }
+    }
+
+    private fun buildValueFilter(
+        valueKey: String,
+        operator: ComparisonOperator,
+        value: PropertyValue
+    ): Bson {
+
+        fun applyOperator(field: String, v: Any): Bson =
+            when (operator) {
+                ComparisonOperator.GT  -> gt(field, v)
+                ComparisonOperator.GTE -> gte(field, v)
+                ComparisonOperator.LT  -> lt(field, v)
+                ComparisonOperator.LTE -> lte(field, v)
+                ComparisonOperator.EQ  -> eq(field, v)
+            }
+
+        return when (value) {
+
+            is PropertyValue.IntPropertyValue ->
+                applyOperator(
+                    "valueMap.$valueKey.value",
+                    value.value
+                )
+
+            is PropertyValue.DoublePropertyValue ->
+                applyOperator(
+                    "valueMap.$valueKey.value",
+                    value.value
+                )
+
+            is PropertyValue.FloatPropertyValue ->
+                applyOperator(
+                    "valueMap.$valueKey.value",
+                    value.value
+                )
+
+            is PropertyValue.LongPropertyValue ->
+                applyOperator(
+                    "valueMap.$valueKey.value",
+                    value.value
+                )
+
+            is PropertyValue.StringPropertyValue ->
+                applyOperator(
+                    "valueMap.$valueKey.value",
+                    value.value
+                )
+
+            is PropertyValue.BooleanPropertyValue ->
+                applyOperator(
+                    "valueMap.$valueKey.value",
+                    value.value
+                )
+
+            PropertyValue.EmptyPropertyValue ->
+                throw IllegalArgumentException("Cannot compare empty property value")
+        }
+    }
+
+    suspend fun findByComparison(
+        propertyName: String,
+        valueKey: String,
+        other: PropertyValue,
+        operator: ComparisonOperator
+    ): List<PropertyDocument> = withContext(Dispatchers.IO) {
+        val valueFilter = buildValueFilter(valueKey, operator, other)
+        val propertyFilter = and(
+            eq("propertyName", propertyName),
+            valueFilter
+        )
+        collection.find(propertyFilter).toList().map { PropertyDocument.fromDocument(it) }
+    }
+}

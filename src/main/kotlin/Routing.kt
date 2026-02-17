@@ -2,22 +2,29 @@ package io.github.whdt
 
 import io.github.whdt.core.hdt.HumanDigitalTwin
 import io.github.whdt.db.hdt.HdtService
+import io.github.whdt.db.property.PropertyService
+import io.github.whdt.query.FindByNameResponse
 import io.github.whdt.query.PropertyComparisonRequest
 import io.github.whdt.query.PropertyComparisonResponse
+import io.github.whdt.util.unwrapAndStringify
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import kotlin.collections.mapOf
 
 fun Application.configureRouting() {
     val mongoDatabase = connectToMongoDB()
     val hdtService = HdtService(mongoDatabase)
+    val propertyService = PropertyService(mongoDatabase)
     routing {
         post("/api/hdts") {
             val hdt = call.receive<HumanDigitalTwin>()
+            // Create HumanDigitalTwin
             val id = hdtService.create(hdt)
+            // Create Properties
+            hdt.models.flatMap { it.properties }.forEach { propertyService.create(hdt.hdtId, it) }
+            // Respond
             call.respond(HttpStatusCode.Created, id)
         }
 
@@ -50,18 +57,21 @@ fun Application.configureRouting() {
 
         get("/api/hdts/findByPropertyName/{propertyName}") {
             val propertyName = call.parameters["propertyName"] ?: throw IllegalArgumentException("No property name found")
-            val hdts = hdtService.findByPropertyName(propertyName)
+            val hdts = propertyService.findByName(propertyName).map { FindByNameResponse(it.hdtId, it.propertyName, it.valueMap["value"].toString()) }
             call.respond(HttpStatusCode.OK, hdts)
         }
 
         post("/api/hdts/findByPropertyComparison") {
             val request = call.receive<PropertyComparisonRequest>()
-            val result = hdtService.findByPropertyComparison(
+            val result = propertyService.findByComparison(
                 request.propertyName,
                 request.valueKey,
+                request.value,
                 request.operator,
-                request.value
-            )
+            ).map {
+                val value = it.valueMap["value"]!!
+                PropertyComparisonResponse(it.hdtId, it.propertyName, value.unwrapAndStringify())
+            }
             call.respond(HttpStatusCode.OK, result)
         }
     }
