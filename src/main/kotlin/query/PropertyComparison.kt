@@ -1,6 +1,5 @@
 package io.github.whdt.query
 
-import io.github.whdt.core.hdt.HumanDigitalTwin
 import io.github.whdt.core.hdt.model.id.HdtId
 import io.github.whdt.core.hdt.model.property.PropertyValue
 import kotlinx.serialization.Serializable
@@ -21,5 +20,6 @@ data class PropertyComparisonRequest(
 @Serializable
 data class PropertyComparisonResponse(
     val hdtId: HdtId,
-    val values: PropertyValue
+    val propertyName: String,
+    val value: String
 )
