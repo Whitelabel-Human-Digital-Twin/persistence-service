@@ -9,32 +9,9 @@ import io.github.whdt.core.hdt.model.property.PropertyValue
 import io.github.whdt.query.ComparisonOperator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
 import org.bson.Document
 import org.bson.conversions.Bson
 import org.bson.types.ObjectId
-
-@Serializable
-data class PropertyDocument(
-    val hdtId: HdtId,
-    val propertyName: String,
-    val valueMap: Map<String, PropertyValue>
-    ) {
-    fun toDocument(): Document = Document.parse(Json.encodeToString(serializer(), this))
-    fun toWhdtProperty(): Property = Property(name = this.propertyName, id = this.propertyName, description ="" , valueMap = this.valueMap)
-
-    companion object {
-        fun fromWhdtProperty(hdtId: HdtId, property: Property): PropertyDocument {
-            return PropertyDocument(hdtId = hdtId, propertyName = property.name, valueMap = property.valueMap)
-        }
-        fun fromDocument(document: Document): PropertyDocument {
-            val copy = Document(document)
-            copy.remove("_id")
-            return Json.decodeFromString(serializer(), copy.toJson())
-        }
-    }
-}
 
 class PropertyService(private val database: MongoDatabase) {
     var collection: MongoCollection<Document>
