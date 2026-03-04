@@ -44,8 +44,6 @@ dependencies {
     testImplementation("io.ktor:ktor-server-test-host")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version")
 
-    implementation("io.github.whdt:whdt-core:0.4.0")
-    implementation("io.github.whdt:whdt-wldt-plugin:0.4.0")
-    implementation("io.github.whdt:whdt-distributed:0.2.0")
-    implementation("io.github.whdt:whdt-csv-parser:0.1.2")
+    implementation("io.github.whdt:whdt-core:0.5.0")
+    implementation("io.github.whdt:whdt-distributed:0.2.1")
 }
