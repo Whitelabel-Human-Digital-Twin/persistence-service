@@ -3,6 +3,7 @@ package io.github.whdt.db.property
 import io.github.whdt.core.hdt.HdtId
 import io.github.whdt.core.hdt.model.ModelId
 import io.github.whdt.core.hdt.model.property.Property
+import io.github.whdt.core.hdt.model.property.PropertyId
 import io.github.whdt.core.hdt.model.property.PropertyName
 import io.github.whdt.core.hdt.model.property.PropertyValue
 import kotlinx.serialization.Serializable
@@ -14,6 +15,7 @@ import kotlin.time.Instant
 data class PropertyDocument(
     val hdtId: HdtId,
     val modelId: ModelId,
+    val propertyId: PropertyId,
     val propertyName: PropertyName,
     val timestamp: Instant,
     val value: PropertyValue
@@ -22,7 +24,14 @@ data class PropertyDocument(
 
     companion object {
         fun fromWhdtProperty(hdtId: HdtId, property: Property): PropertyDocument {
-            return PropertyDocument(hdtId = hdtId, modelId = property.modelId, propertyName = property.name, timestamp = property.timestamp, value = property.value)
+            return PropertyDocument(
+                hdtId = hdtId,
+                modelId = property.modelId,
+                propertyId = property.id,
+                propertyName = property.name,
+                timestamp = property.timestamp,
+                value = property.value
+            )
         }
         fun fromDocument(document: Document): PropertyDocument {
             val copy = Document(document)
