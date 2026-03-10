@@ -1,6 +1,7 @@
 package io.github.whdt.query
 
-import io.github.whdt.core.hdt.model.id.HdtId
+import io.github.whdt.core.hdt.HdtId
+import io.github.whdt.core.hdt.model.property.PropertyName
 import io.github.whdt.core.hdt.model.property.PropertyValue
 import kotlinx.serialization.Serializable
 
@@ -11,8 +12,7 @@ enum class ComparisonOperator {
 
 @Serializable
 data class PropertyComparisonRequest(
-    val propertyName: String,
-    val valueKey: String,
+    val propertyName: PropertyName,
     val operator: ComparisonOperator,
     val value: PropertyValue
 )
@@ -20,6 +20,6 @@ data class PropertyComparisonRequest(
 @Serializable
 data class PropertyComparisonResponse(
     val hdtId: HdtId,
-    val propertyName: String,
+    val propertyName: PropertyName,
     val value: String
 )

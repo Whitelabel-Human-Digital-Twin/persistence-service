@@ -3,8 +3,9 @@ package io.github.whdt.db.property
 import com.mongodb.client.MongoCollection
 import com.mongodb.client.MongoDatabase
 import com.mongodb.client.model.Filters.*
-import io.github.whdt.core.hdt.model.id.HdtId
+import io.github.whdt.core.hdt.HdtId
 import io.github.whdt.core.hdt.model.property.Property
+import io.github.whdt.core.hdt.model.property.PropertyName
 import io.github.whdt.core.hdt.model.property.PropertyValue
 import io.github.whdt.query.ComparisonOperator
 import kotlinx.coroutines.Dispatchers
@@ -40,12 +41,11 @@ class PropertyService(private val database: MongoDatabase) {
         collection.find().toList().map { PropertyDocument.fromDocument(it) }.toList()
     }
 
-    suspend fun findByName(propertyName: String): List<PropertyDocument> = withContext(Dispatchers.IO) {
+    suspend fun findByName(propertyName: PropertyName): List<PropertyDocument> = withContext(Dispatchers.IO) {
         findAll().filter { it.propertyName == propertyName }
     }
 
     private fun buildValueFilter(
-        valueKey: String,
         operator: ComparisonOperator,
         value: PropertyValue
     ): Bson {
@@ -63,37 +63,37 @@ class PropertyService(private val database: MongoDatabase) {
 
             is PropertyValue.IntPropertyValue ->
                 applyOperator(
-                    "valueMap.$valueKey.value",
+                    "value.value",
                     value.value
                 )
 
             is PropertyValue.DoublePropertyValue ->
                 applyOperator(
-                    "valueMap.$valueKey.value",
+                    "value.value",
                     value.value
                 )
 
             is PropertyValue.FloatPropertyValue ->
                 applyOperator(
-                    "valueMap.$valueKey.value",
+                    "value.value",
                     value.value
                 )
 
             is PropertyValue.LongPropertyValue ->
                 applyOperator(
-                    "valueMap.$valueKey.value",
+                    "value.value",
                     value.value
                 )
 
             is PropertyValue.StringPropertyValue ->
                 applyOperator(
-                    "valueMap.$valueKey.value",
+                    "value.value",
                     value.value
                 )
 
             is PropertyValue.BooleanPropertyValue ->
                 applyOperator(
-                    "valueMap.$valueKey.value",
+                    "value.value",
                     value.value
                 )
 
@@ -103,14 +103,13 @@ class PropertyService(private val database: MongoDatabase) {
     }
 
     suspend fun findByComparison(
-        propertyName: String,
-        valueKey: String,
+        propertyName: PropertyName,
         other: PropertyValue,
         operator: ComparisonOperator
     ): List<PropertyDocument> = withContext(Dispatchers.IO) {
-        val valueFilter = buildValueFilter(valueKey, operator, other)
+        val valueFilter = buildValueFilter(operator, other)
         val propertyFilter = and(
-            eq("propertyName", propertyName),
+            eq("propertyName", propertyName.value),
             valueFilter
         )
         collection.find(propertyFilter).toList().map { PropertyDocument.fromDocument(it) }

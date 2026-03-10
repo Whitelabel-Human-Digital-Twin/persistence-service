@@ -31,7 +31,7 @@ fun Application.connectToMongoDB(): MongoDatabase {
 
     val credentials = user?.let { userVal -> password?.let { passwordVal -> "$userVal:$passwordVal@" } }.orEmpty()
     val uri = "mongodb://$credentials$host:$port/?maxPoolSize=$maxPoolSize&w=majority"*/
-    val databaseName = environment.config.tryGetString("db.mongo.database.name") ?: "myDatabase"
+    val databaseName = environment.config.tryGetString("db.mongo.database.name") ?: "idasy-test-v0_6_1"
     val uri = environment.config.tryGetString("db.mongo.uri")
 
     val mongoClient = MongoClients.create(uri)

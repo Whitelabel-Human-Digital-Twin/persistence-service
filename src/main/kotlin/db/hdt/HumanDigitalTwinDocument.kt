@@ -1,9 +1,9 @@
 package io.github.whdt.db.hdt
 
+import io.github.whdt.core.hdt.HdtId
 import io.github.whdt.core.hdt.HumanDigitalTwin
 import io.github.whdt.core.hdt.interfaces.digital.DigitalInterface
 import io.github.whdt.core.hdt.interfaces.physical.PhysicalInterface
-import io.github.whdt.core.hdt.model.id.HdtId
 import io.github.whdt.core.hdt.storage.Storage
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json

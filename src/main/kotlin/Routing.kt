@@ -1,6 +1,7 @@
 package io.github.whdt
 
 import io.github.whdt.core.hdt.HumanDigitalTwin
+import io.github.whdt.core.hdt.model.property.PropertyName
 import io.github.whdt.db.hdt.HdtService
 import io.github.whdt.db.property.PropertyService
 import io.github.whdt.query.FindByNameResponse
@@ -56,20 +57,19 @@ fun Application.configureRouting() {
         }
 
         get("/api/hdts/findByPropertyName/{propertyName}") {
-            val propertyName = call.parameters["propertyName"] ?: throw IllegalArgumentException("No property name found")
-            val hdts = propertyService.findByName(propertyName).map { FindByNameResponse(it.hdtId, it.propertyName, it.valueMap["value"].toString()) }
+            val propertyNameRaw = call.parameters["propertyName"] ?: throw IllegalArgumentException("No property name found")
+            val hdts = propertyService.findByName(PropertyName(propertyNameRaw)).map { FindByNameResponse(it.hdtId, it.propertyName, it.value.toString()) }
             call.respond(HttpStatusCode.OK, hdts)
         }
 
         post("/api/hdts/findByPropertyComparison") {
             val request = call.receive<PropertyComparisonRequest>()
             val result = propertyService.findByComparison(
-                request.propertyName,
-                request.valueKey,
-                request.value,
-                request.operator,
-            ).map {
-                val value = it.valueMap["value"]!!
+                    request.propertyName,
+                    request.value,
+                    request.operator,
+                ).map {
+                val value = it.value
                 PropertyComparisonResponse(it.hdtId, it.propertyName, value.unwrapAndStringify())
             }
             call.respond(HttpStatusCode.OK, result)

@@ -1,11 +1,12 @@
 package io.github.whdt.query
 
-import io.github.whdt.core.hdt.model.id.HdtId
+import io.github.whdt.core.hdt.HdtId
+import io.github.whdt.core.hdt.model.property.PropertyName
 import kotlinx.serialization.Serializable
 
 @Serializable
 data class FindByNameResponse(
     val hdtId: HdtId,
-    val propertyName: String,
+    val propertyName: PropertyName,
     val propertyValue: String,
 )
