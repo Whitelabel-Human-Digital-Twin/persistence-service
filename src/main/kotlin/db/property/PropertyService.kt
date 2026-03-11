@@ -3,6 +3,7 @@ package io.github.whdt.db.property
 import com.mongodb.client.MongoCollection
 import com.mongodb.client.MongoDatabase
 import com.mongodb.client.model.Filters.*
+import com.mongodb.client.model.ReplaceOptions
 import io.github.whdt.core.hdt.HdtId
 import io.github.whdt.core.hdt.model.property.Property
 import io.github.whdt.core.hdt.model.property.PropertyName
@@ -27,6 +28,15 @@ class PropertyService(private val database: MongoDatabase) {
         val doc = propertyDoc.toDocument()
         collection.insertOne(doc)
         doc["_id"].toString()
+    }
+
+    suspend fun upsert(hdtId: HdtId, property: Property): Boolean = withContext(Dispatchers.IO) {
+        val filter = eq("propertyId", property.id.value)
+        val options = ReplaceOptions().upsert(true)
+        val propertyDoc = PropertyDocument.fromWhdtProperty(hdtId, property)
+        val doc = propertyDoc.toDocument()
+        val res = collection.replaceOne(filter, doc,options)
+        res.wasAcknowledged()
     }
 
     suspend fun read(id: String): PropertyDocument? = withContext(Dispatchers.IO) {
