@@ -3,6 +3,7 @@ package io.github.whdt.db.model
 import com.mongodb.client.MongoCollection
 import com.mongodb.client.MongoDatabase
 import com.mongodb.client.model.Filters.eq
+import com.mongodb.client.model.ReplaceOptions
 import io.github.whdt.core.hdt.model.Model
 import io.github.whdt.core.hdt.model.ModelName
 import kotlinx.coroutines.Dispatchers
@@ -23,6 +24,15 @@ class ModelService(private val database: MongoDatabase) {
         val doc = modelDoc.toDocument()
         collection.insertOne(doc)
         doc["_id"].toString()
+    }
+
+    suspend fun upsert(model: Model): Boolean = withContext(Dispatchers.IO) {
+        val filter = eq("modelId", model.id.value)
+        val options = ReplaceOptions().upsert(true)
+        val modelDoc = ModelDocument.fromWhdtModel(model)
+        val doc = modelDoc.toDocument()
+        val res = collection.replaceOne(filter, doc,options)
+        res.wasAcknowledged()
     }
 
     suspend fun read(id: String): ModelDocument? = withContext(Dispatchers.IO) {

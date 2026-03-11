@@ -66,6 +66,16 @@ fun Application.configureRouting() {
             call.respond(HttpStatusCode.Created, id)
         }
 
+        post("/api/hdts/models/upsert") {
+            val model = call.receive<Model>()
+            val res = modelService.upsert(model)
+            if (res) {
+                call.respond(HttpStatusCode.OK)
+            } else {
+                call.respond(HttpStatusCode.InternalServerError)
+            }
+        }
+
         get("/api/hdts/findByPropertyName/{propertyName}") {
             val propertyNameRaw = call.parameters["propertyName"] ?: throw IllegalArgumentException("No property name found")
             val hdts = propertyService.findByName(PropertyName(propertyNameRaw)).map { FindByNameResponse(it.hdtId, it.propertyName, it.value.toString()) }
