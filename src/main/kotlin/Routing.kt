@@ -1,8 +1,10 @@
 package io.github.whdt
 
 import io.github.whdt.core.hdt.HumanDigitalTwin
+import io.github.whdt.core.hdt.model.Model
 import io.github.whdt.core.hdt.model.property.PropertyName
 import io.github.whdt.db.hdt.HdtService
+import io.github.whdt.db.model.ModelService
 import io.github.whdt.db.property.PropertyService
 import io.github.whdt.query.FindByNameResponse
 import io.github.whdt.query.PropertyComparisonRequest
@@ -17,12 +19,14 @@ import io.ktor.server.routing.*
 fun Application.configureRouting() {
     val mongoDatabase = connectToMongoDB()
     val hdtService = HdtService(mongoDatabase)
+    val modelService = ModelService(mongoDatabase)
     val propertyService = PropertyService(mongoDatabase)
     routing {
         post("/api/hdts") {
             val hdt = call.receive<HumanDigitalTwin>()
             // Create HumanDigitalTwin
             val id = hdtService.create(hdt)
+            hdt.models.forEach { modelService.create(it) }
             // Create Properties
             hdt.models.flatMap { it.properties }.forEach { propertyService.create(hdt.hdtId, it) }
             // Respond
@@ -54,6 +58,12 @@ fun Application.configureRouting() {
             hdtService.delete(id)?.let {
                 call.respond(HttpStatusCode.OK)
             } ?: call.respond(HttpStatusCode.NotFound)
+        }
+
+        post("/api/hdts/models") {
+            val model = call.receive<Model>()
+            val id = modelService.create(model)
+            call.respond(HttpStatusCode.Created, id)
         }
 
         get("/api/hdts/findByPropertyName/{propertyName}") {
