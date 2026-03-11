@@ -5,6 +5,7 @@ import io.github.whdt.core.hdt.model.Model
 import io.github.whdt.core.hdt.model.property.PropertyName
 import io.github.whdt.db.hdt.HdtService
 import io.github.whdt.db.model.ModelService
+import io.github.whdt.db.property.PropertyEventService
 import io.github.whdt.db.property.PropertyService
 import io.github.whdt.query.FindByNameResponse
 import io.github.whdt.query.PropertyComparisonRequest
@@ -21,6 +22,7 @@ fun Application.configureRouting() {
     val hdtService = HdtService(mongoDatabase)
     val modelService = ModelService(mongoDatabase)
     val propertyService = PropertyService(mongoDatabase)
+    val propertyEventService = PropertyEventService(mongoDatabase)
     routing {
         post("/api/hdts") {
             val hdt = call.receive<HumanDigitalTwin>()
@@ -69,6 +71,17 @@ fun Application.configureRouting() {
         post("/api/hdts/models/upsert") {
             val model = call.receive<Model>()
             val res = modelService.upsert(model)
+            if (res) {
+                call.respond(HttpStatusCode.OK)
+            } else {
+                call.respond(HttpStatusCode.InternalServerError)
+            }
+        }
+
+        post("/api/hdts/events") {
+            val hdt = call.receive<HumanDigitalTwin>()
+            val hdtId = hdt.hdtId
+            val res = propertyEventService.insertMany(hdtId, hdt.models.flatMap { it.properties })
             if (res) {
                 call.respond(HttpStatusCode.OK)
             } else {
