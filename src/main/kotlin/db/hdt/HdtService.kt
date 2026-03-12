@@ -3,6 +3,8 @@ package io.github.whdt.db.hdt
 import com.mongodb.client.MongoCollection
 import com.mongodb.client.MongoDatabase
 import com.mongodb.client.model.Filters.eq
+import com.mongodb.client.model.ReplaceOneModel
+import com.mongodb.client.model.ReplaceOptions
 import io.github.whdt.core.hdt.HumanDigitalTwin
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -25,9 +27,32 @@ class HdtService(private val database: MongoDatabase) {
         doc["_id"].toString()
     }
 
+    suspend fun upsert(hdt: HumanDigitalTwin): Boolean = withContext(Dispatchers.IO) {
+        val filter = eq("hdtId", hdt.hdtId.id)
+        val options = ReplaceOptions().upsert(true)
+        val hdtDoc = HumanDigitalTwinDocument.fromHumanDigitalTwin(hdt)
+        val doc = hdtDoc.toDocument()
+        val res = collection.replaceOne(filter, doc,options)
+        res.wasAcknowledged()
+    }
+
     suspend fun insertMany(hdts: List<HumanDigitalTwin>): Boolean = withContext(Dispatchers.IO) {
         val docs = hdts.map { HumanDigitalTwinDocument.fromHumanDigitalTwin(it) }.map { it.toDocument() }
         val res = collection.insertMany(docs)
+        res.wasAcknowledged()
+    }
+
+    suspend fun upsertMany(hdts: List<HumanDigitalTwin>): Boolean = withContext(Dispatchers.IO) {
+        val docs = hdts.map { HumanDigitalTwinDocument.fromHumanDigitalTwin(it) }.map { it.toDocument() }
+        val operations = docs.map {
+            val id = it["hdtId"]
+            ReplaceOneModel(
+                eq("hdtId", id),
+                it,
+                ReplaceOptions().upsert(true)
+            )
+        }
+        val res = collection.bulkWrite(operations)
         res.wasAcknowledged()
     }
 
