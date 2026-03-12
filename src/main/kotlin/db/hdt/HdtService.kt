@@ -25,6 +25,12 @@ class HdtService(private val database: MongoDatabase) {
         doc["_id"].toString()
     }
 
+    suspend fun insertMany(hdts: List<HumanDigitalTwin>): Boolean = withContext(Dispatchers.IO) {
+        val docs = hdts.map { HumanDigitalTwinDocument.fromHumanDigitalTwin(it) }.map { it.toDocument() }
+        val res = collection.insertMany(docs)
+        res.wasAcknowledged()
+    }
+
     suspend fun read(id: String): HumanDigitalTwinDocument? = withContext(Dispatchers.IO) {
         collection.find(eq("_id", ObjectId(id))).first()?.let(HumanDigitalTwinDocument::fromDocument)
     }
