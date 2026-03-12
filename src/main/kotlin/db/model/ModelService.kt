@@ -45,9 +45,9 @@ class ModelService(private val database: MongoDatabase) {
     suspend fun upsertMany(models: List<Model>): Boolean = withContext(Dispatchers.IO) {
         val docs = models.map { ModelDocument.fromWhdtModel(it) }.map { it.toDocument() }
         val operations = docs.map {
-            val id = it["_id"]
+            val id = it["modelId"]
             ReplaceOneModel(
-                eq("_id", id),
+                eq("modelId", id),
                 it,
                 ReplaceOptions().upsert(true)
             )
