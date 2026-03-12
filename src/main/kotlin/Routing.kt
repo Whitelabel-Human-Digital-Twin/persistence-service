@@ -1,7 +1,9 @@
 package io.github.whdt
 
+import io.github.whdt.core.hdt.HdtId
 import io.github.whdt.core.hdt.HumanDigitalTwin
 import io.github.whdt.core.hdt.model.Model
+import io.github.whdt.core.hdt.model.property.Property
 import io.github.whdt.db.hdt.HdtService
 import io.github.whdt.db.model.ModelService
 import io.github.whdt.db.property.PropertyEventService
@@ -10,8 +12,6 @@ import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import java.io.File
-import java.io.Writer
 
 fun Application.configureRouting() {
     val mongoDatabase = connectToMongoDB()
@@ -19,11 +19,10 @@ fun Application.configureRouting() {
     val modelService = ModelService(mongoDatabase)
     val propertyEventService = PropertyEventService(mongoDatabase)
 
-    suspend fun insertPropertiesFromHdts(hdts: List<HumanDigitalTwin>): Boolean {
+    suspend fun mapPropertiesFromHdts(hdts: List<HumanDigitalTwin>, mapping: suspend (HdtId, List<Property>) -> Boolean): Boolean {
         return hdts.map {
             val properties = it.models.flatMap { m -> m.properties }
-            val res = propertyEventService.insertMany(it.hdtId, properties)
-            res
+            mapping(it.hdtId, properties)
         }.foldRight(true){ a, b -> a&&b }
     }
 
@@ -50,26 +49,28 @@ fun Application.configureRouting() {
             val resModel = modelService.insertMany(models)
             if (!resModel) return@post call.respond(HttpStatusCode.InternalServerError)
 
-            val resProperty = insertPropertiesFromHdts(hdts)
+            val resProperty = mapPropertiesFromHdts(hdts) { id, p ->
+                propertyEventService.insertMany(id, p)
+            }
             if (!resProperty) return@post call.respond(HttpStatusCode.InternalServerError)
 
             call.respond(HttpStatusCode.OK)
         }
 
         put("/api/hdts/many") {
-            //val hdts = call.receive<List<HumanDigitalTwin>>()
-            val json = call.receiveText()
-            File("data.json").writeText(json)
-            /*val resHdt = hdtService.upsertMany(hdts)
+            val hdts = call.receive<List<HumanDigitalTwin>>()
+            val resHdt = hdtService.upsertMany(hdts)
             if (!resHdt) return@put call.respond(HttpStatusCode.InternalServerError)
 
             val models = hdts.flatMap { it.models }
             val resModel = modelService.upsertMany(models)
             if (!resModel) return@put call.respond(HttpStatusCode.InternalServerError)
 
-            val resProperty = insertPropertiesFromHdts(hdts)
+            val resProperty = mapPropertiesFromHdts(hdts) { id, p ->
+                propertyEventService.insertMany(id, p)
+            }
             if (!resProperty) return@put call.respond(HttpStatusCode.InternalServerError)
-*/
+
             call.respond(HttpStatusCode.OK)
         }
 
