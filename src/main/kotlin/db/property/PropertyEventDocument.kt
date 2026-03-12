@@ -10,7 +10,18 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import org.bson.BsonDateTime
 import org.bson.Document
+import java.util.Date
 import kotlin.time.Instant
+import kotlin.time.toJavaInstant
+
+fun PropertyValue.toBsonValue(): Any? = when (this) {
+    is PropertyValue.StringPropertyValue -> this.value
+    is PropertyValue.IntPropertyValue -> this.value
+    is PropertyValue.LongPropertyValue -> this.value
+    is PropertyValue.DoublePropertyValue -> this.value
+    is PropertyValue.BooleanPropertyValue -> this.value
+    else -> null
+}
 
 @Serializable
 data class PropertyEventMetadata(
@@ -30,12 +41,11 @@ data class PropertyEventDocument(
 ) {
     fun toDocument(): Document {
         val mF = metaField.toDocument()
-        val tF = BsonDateTime(timeField.toEpochMilliseconds())
-        val valueF = Json.encodeToString(PropertyValue.serializer(), value)
+        val tF = Date.from(timeField.toJavaInstant())
         val doc = Document()
             .append("metaField", mF)
             .append("timeField", tF)
-            .append("value", valueF)
+            .append("value", value.toBsonValue())
         return doc
     }
 
