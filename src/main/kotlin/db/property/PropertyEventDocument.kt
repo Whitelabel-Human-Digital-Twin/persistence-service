@@ -12,6 +12,7 @@ import org.bson.Document
 import java.util.*
 import kotlin.time.Instant
 import kotlin.time.toJavaInstant
+import kotlin.time.toKotlinInstant
 
 fun Any.pv(): PropertyValue? = when (this) {
     is Int -> PropertyValue.IntPropertyValue(this)
@@ -40,6 +41,21 @@ data class PropertyEventMetadata(
     val propertyId: PropertyId,
 ) {
     fun toDocument(): Document = Document.parse(Json.encodeToString(serializer(), this))
+
+    companion object {
+        fun fromDocument(document: Document): PropertyEventMetadata {
+            val hidRaw = document.getString("hdtId")
+            val midRaw = document.getString("modelId")
+            val pidRaw = document.getString("propertyId")
+            val pnRaw = document.getString("propertyName")
+            return PropertyEventMetadata(
+                HdtId(hidRaw),
+                ModelId(midRaw),
+                PropertyName(pidRaw),
+                PropertyId(pnRaw)
+            )
+        }
+    }
 }
 
 @Serializable
@@ -59,6 +75,18 @@ data class PropertyEventDocument(
     }
 
     companion object {
+        fun fromDocument(doc: Document): PropertyEventDocument {
+            val meta = doc.get("metaField", Document::class.java)
+            val metaField = PropertyEventMetadata.fromDocument(meta)
+            val value = doc["value"]?.pv()
+            val time = doc.getDate("timeField")?.toInstant()?.toKotlinInstant()
+            return PropertyEventDocument(
+                metaField,
+                time!!,
+                value!!
+            )
+        }
+
         fun fromWhdtProperty(hdtId: HdtId, property: Property): PropertyEventDocument {
             val meta = PropertyEventMetadata(
                 hdtId = hdtId,
