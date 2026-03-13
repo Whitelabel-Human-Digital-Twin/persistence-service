@@ -7,11 +7,13 @@ import io.github.whdt.core.hdt.model.property.Property
 import io.github.whdt.db.hdt.HdtService
 import io.github.whdt.db.model.ModelService
 import io.github.whdt.db.property.PropertyEventService
+import io.github.whdt.request.PropertyValuesRequest
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import kotlin.time.toJavaInstant
 
 fun Application.configureRouting() {
     val mongoDatabase = connectToMongoDB()
@@ -146,6 +148,27 @@ fun Application.configureRouting() {
             } else {
                 call.respond(HttpStatusCode.InternalServerError)
             }
+        }
+
+        post("/api/hdts/events/propertyValuesById") {
+            val req = call.receive<PropertyValuesRequest>()
+            val values = propertyEventService.propertyValuesById(
+                propertyId = req.propertyId!!,
+                req.from.toJavaInstant(),
+                req.to.toJavaInstant()
+            )
+            call.respond(HttpStatusCode.OK, values)
+        }
+
+        post("/api/hdts/events/propertyValuesByName") {
+            val req = call.receive<PropertyValuesRequest>()
+            val values = propertyEventService.propertyValuesByName(
+                hdtId = req.hdtId!!,
+                propertyName = req.propertyName!!,
+                req.from.toJavaInstant(),
+                req.to.toJavaInstant()
+            )
+            call.respond(HttpStatusCode.OK, values)
         }
 
         /* OLD API
