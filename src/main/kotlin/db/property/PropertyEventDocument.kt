@@ -8,11 +8,20 @@ import io.github.whdt.core.hdt.model.property.PropertyName
 import io.github.whdt.core.hdt.model.property.PropertyValue
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import org.bson.BsonDateTime
 import org.bson.Document
-import java.util.Date
+import java.util.*
 import kotlin.time.Instant
 import kotlin.time.toJavaInstant
+
+fun Any.pv(): PropertyValue? = when (this) {
+    is Int -> PropertyValue.IntPropertyValue(this)
+    is Long -> PropertyValue.LongPropertyValue(this)
+    is Float -> PropertyValue.FloatPropertyValue(this)
+    is Double -> PropertyValue.DoublePropertyValue(this)
+    is String -> PropertyValue.StringPropertyValue(this)
+    is Boolean -> PropertyValue.BooleanPropertyValue(this)
+    else -> null
+}
 
 fun PropertyValue.toBsonValue(): Any? = when (this) {
     is PropertyValue.StringPropertyValue -> this.value
