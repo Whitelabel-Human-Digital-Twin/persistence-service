@@ -154,8 +154,8 @@ fun Application.configureRouting() {
             val req = call.receive<PropertyValuesRequest>()
             val values = propertyEventService.propertyValuesById(
                 propertyId = req.propertyId!!,
-                req.from.toJavaInstant(),
-                req.to.toJavaInstant()
+                req.from!!.toJavaInstant(),
+                req.to!!.toJavaInstant()
             )
             call.respond(HttpStatusCode.OK, values)
         }
@@ -165,8 +165,17 @@ fun Application.configureRouting() {
             val values = propertyEventService.propertyValuesByName(
                 hdtId = req.hdtId!!,
                 propertyName = req.propertyName!!,
-                req.from.toJavaInstant(),
-                req.to.toJavaInstant()
+                req.from!!.toJavaInstant(),
+                req.to!!.toJavaInstant()
+            )
+            call.respond(HttpStatusCode.OK, values)
+        }
+
+        post("/api/hdts/events/propertyHistory") {
+            val req = call.receive<PropertyValuesRequest>()
+            val values = propertyEventService.propertyHistory(
+                hdtId = req.hdtId!!,
+                propertyName = req.propertyName!!,
             )
             call.respond(HttpStatusCode.OK, values)
         }

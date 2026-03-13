@@ -13,6 +13,6 @@ data class PropertyValuesRequest(
     val modelId: ModelId? = null,
     val propertyId: PropertyId? = null,
     val propertyName: PropertyName? = null,
-    val from: Instant,
-    val to: Instant,
+    val from: Instant? = null,
+    val to: Instant? = null,
 )
