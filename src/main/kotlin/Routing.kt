@@ -139,6 +139,16 @@ fun Application.configureRouting() {
             }
         }
 
+        get("/api/hdts/{id}/events") {
+            val id = call.parameters["id"] ?: throw IllegalArgumentException("No ID found")
+            val res = propertyEventService.propertiesByHdtId(HdtId(id))
+            if (res.isNotEmpty()) {
+                call.respond(HttpStatusCode.OK, res)
+            } else {
+                call.respond(HttpStatusCode.NotFound)
+            }
+        }
+
         post("/api/hdts/events") {
             val hdt = call.receive<HumanDigitalTwin>()
             val hdtId = hdt.hdtId
@@ -152,7 +162,7 @@ fun Application.configureRouting() {
 
         post("/api/hdts/events/propertyValuesById") {
             val req = call.receive<PropertyValuesRequest>()
-            val values = propertyEventService.propertyValuesById(
+            val values = propertyEventService.propertiesById(
                 propertyId = req.propertyId!!,
                 req.from!!.toJavaInstant(),
                 req.to!!.toJavaInstant()
@@ -162,7 +172,7 @@ fun Application.configureRouting() {
 
         post("/api/hdts/events/propertyValuesByName") {
             val req = call.receive<PropertyValuesRequest>()
-            val values = propertyEventService.propertyValuesByName(
+            val values = propertyEventService.propertiesByName(
                 hdtId = req.hdtId!!,
                 propertyName = req.propertyName!!,
                 req.from!!.toJavaInstant(),

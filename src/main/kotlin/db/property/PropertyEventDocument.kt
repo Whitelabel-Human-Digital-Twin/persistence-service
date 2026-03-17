@@ -28,6 +28,7 @@ fun PropertyValue.toBsonValue(): Any? = when (this) {
     is PropertyValue.StringPropertyValue -> this.value
     is PropertyValue.IntPropertyValue -> this.value
     is PropertyValue.LongPropertyValue -> this.value
+    is PropertyValue.FloatPropertyValue -> this.value
     is PropertyValue.DoublePropertyValue -> this.value
     is PropertyValue.BooleanPropertyValue -> this.value
     else -> null
@@ -43,16 +44,16 @@ data class PropertyEventMetadata(
     fun toDocument(): Document = Document.parse(Json.encodeToString(serializer(), this))
 
     companion object {
-        fun fromDocument(document: Document): PropertyEventMetadata {
-            val hidRaw = document.getString("hdtId")
-            val midRaw = document.getString("modelId")
-            val pidRaw = document.getString("propertyId")
-            val pnRaw = document.getString("propertyName")
+        fun fromDocument(document: Document): PropertyEventMetadata? {
+            val hidRaw = document.getString("hdtId") ?: return null
+            val midRaw = document.getString("modelId") ?: return null
+            val pidRaw = document.getString("propertyId") ?: return null
+            val pnRaw = document.getString("propertyName") ?: return null
             return PropertyEventMetadata(
                 HdtId(hidRaw),
                 ModelId(midRaw),
-                PropertyName(pidRaw),
-                PropertyId(pnRaw)
+                PropertyName(pnRaw),
+                PropertyId(pidRaw)
             )
         }
     }
@@ -75,15 +76,15 @@ data class PropertyEventDocument(
     }
 
     companion object {
-        fun fromDocument(doc: Document): PropertyEventDocument {
+        fun fromDocument(doc: Document): PropertyEventDocument? {
             val meta = doc.get("metaField", Document::class.java)
-            val metaField = PropertyEventMetadata.fromDocument(meta)
-            val value = doc["value"]?.pv()
-            val time = doc.getDate("timeField")?.toInstant()?.toKotlinInstant()
+            val metaField = PropertyEventMetadata.fromDocument(meta) ?: return null
+            val value = doc["value"]?.pv() ?: return null
+            val time = doc.getDate("timeField")?.toInstant()?.toKotlinInstant() ?: return null
             return PropertyEventDocument(
                 metaField,
-                time!!,
-                value!!
+                time,
+                value
             )
         }
 
