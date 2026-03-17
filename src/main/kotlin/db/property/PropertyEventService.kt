@@ -65,7 +65,7 @@ class PropertyEventService(val db: MongoDatabase) {
         }
     }
 
-    suspend fun propertyValuesById(
+    suspend fun propertiesById(
         propertyId: PropertyId,
         from: Instant,
         to: Instant
@@ -77,7 +77,7 @@ class PropertyEventService(val db: MongoDatabase) {
             .mapNotNull(PropertyEventDocument::fromDocument)
     }
 
-    suspend fun propertyValuesByName(
+    suspend fun propertiesByName(
         hdtId: HdtId,
         propertyName: PropertyName,
         from: Instant,
@@ -88,6 +88,23 @@ class PropertyEventService(val db: MongoDatabase) {
             .projection(fields(include("metaField", "timeField", "value")))
             .toList()
             .mapNotNull(PropertyEventDocument::fromDocument)
+    }
+
+    suspend fun propertiesByHdtId(
+        hdtId: HdtId,
+    ): List<PropertyEventDocument> = withContext(Dispatchers.IO) {
+        val filters = baseMatch(hdtId = hdtId.id)
+        collection.find(filters)
+            .projection(fields(include("metaField", "timeField", "value")))
+            .toList()
+            .mapNotNull { doc ->
+                try {
+                    PropertyEventDocument.fromDocument(doc)
+                } catch (e: Exception) {
+                    println("Failed to parse document: ${doc.toJson()}")
+                    throw e
+                }
+            }
     }
 
     suspend fun propertyHistory(
