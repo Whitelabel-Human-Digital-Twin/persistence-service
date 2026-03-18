@@ -2,6 +2,7 @@ package io.github.whdt.db.property
 
 import io.github.whdt.core.hdt.HdtId
 import io.github.whdt.core.hdt.model.ModelId
+import io.github.whdt.core.hdt.model.ModelName
 import io.github.whdt.core.hdt.model.property.Property
 import io.github.whdt.core.hdt.model.property.PropertyId
 import io.github.whdt.core.hdt.model.property.PropertyName
@@ -38,6 +39,7 @@ fun PropertyValue.toBsonValue(): Any? = when (this) {
 data class PropertyEventMetadata(
     val hdtId: HdtId,
     val modelId: ModelId,
+    val modelName: ModelName,
     val propertyName: PropertyName,
     val propertyId: PropertyId,
 ) {
@@ -47,11 +49,13 @@ data class PropertyEventMetadata(
         fun fromDocument(document: Document): PropertyEventMetadata? {
             val hidRaw = document.getString("hdtId") ?: return null
             val midRaw = document.getString("modelId") ?: return null
+            val mnRaw = document.getString("modelName") ?: return null
             val pidRaw = document.getString("propertyId") ?: return null
             val pnRaw = document.getString("propertyName") ?: return null
             return PropertyEventMetadata(
                 HdtId(hidRaw),
                 ModelId(midRaw),
+                ModelName(mnRaw),
                 PropertyName(pnRaw),
                 PropertyId(pidRaw)
             )
@@ -89,9 +93,12 @@ data class PropertyEventDocument(
         }
 
         fun fromWhdtProperty(hdtId: HdtId, property: Property): PropertyEventDocument {
+            val mnRaw = property.modelId.value.split(":").last()
+            val modelName = ModelName(mnRaw)
             val meta = PropertyEventMetadata(
                 hdtId = hdtId,
                 modelId = property.modelId,
+                modelName = modelName,
                 propertyName = property.name,
                 propertyId = property.id
             )
