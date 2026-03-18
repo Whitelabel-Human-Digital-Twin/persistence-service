@@ -65,16 +65,27 @@ class PropertyEventService(val db: MongoDatabase) {
         }
     }
 
+    private suspend fun findPropertiesWithFilter(
+        hdtId: String? = null,
+        modelId: String? = null,
+        propertyId: String? = null,
+        propertyName: String? = null,
+        from: Instant? = null,
+        to: Instant? = null
+    ): List<PropertyEventDocument> = withContext(Dispatchers.IO) {
+        val filters = baseMatch(hdtId, modelId, propertyId, propertyName, from, to)
+        collection.find(filters)
+            .projection(fields(include("metaField", "timeField", "value")))
+            .toList()
+            .mapNotNull(PropertyEventDocument::fromDocument)
+    }
+
     suspend fun propertiesById(
         propertyId: PropertyId,
         from: Instant,
         to: Instant
     ): List<PropertyEventDocument> = withContext(Dispatchers.IO) {
-        val filters = baseMatch(propertyId = propertyId.value, from = from, to = to)
-        collection.find(filters)
-            .projection(fields(include("metaField", "timeField", "value")))
-            .toList()
-            .mapNotNull(PropertyEventDocument::fromDocument)
+        findPropertiesWithFilter(propertyId = propertyId.value, from = from, to = to)
     }
 
     suspend fun propertiesByName(
@@ -83,28 +94,13 @@ class PropertyEventService(val db: MongoDatabase) {
         from: Instant,
         to: Instant,
     ): List<PropertyEventDocument> = withContext(Dispatchers.IO) {
-        val filters = baseMatch(hdtId = hdtId.id, propertyName = propertyName.value, from = from, to = to)
-        collection.find(filters)
-            .projection(fields(include("metaField", "timeField", "value")))
-            .toList()
-            .mapNotNull(PropertyEventDocument::fromDocument)
+        findPropertiesWithFilter(hdtId = hdtId.id, propertyName = propertyName.value, from = from, to = to)
     }
 
     suspend fun propertiesByHdtId(
         hdtId: HdtId,
     ): List<PropertyEventDocument> = withContext(Dispatchers.IO) {
-        val filters = baseMatch(hdtId = hdtId.id)
-        collection.find(filters)
-            .projection(fields(include("metaField", "timeField", "value")))
-            .toList()
-            .mapNotNull { doc ->
-                try {
-                    PropertyEventDocument.fromDocument(doc)
-                } catch (e: Exception) {
-                    println("Failed to parse document: ${doc.toJson()}")
-                    throw e
-                }
-            }
+        findPropertiesWithFilter(hdtId = hdtId.id)
     }
 
     suspend fun propertyHistory(
