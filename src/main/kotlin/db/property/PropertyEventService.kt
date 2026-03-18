@@ -3,6 +3,10 @@ package io.github.whdt.db.property
 import com.mongodb.client.MongoCollection
 import com.mongodb.client.MongoDatabase
 import com.mongodb.client.model.*
+import com.mongodb.client.model.Accumulators.addToSet
+import com.mongodb.client.model.Aggregates.group
+import com.mongodb.client.model.Aggregates.match
+import com.mongodb.client.model.Aggregates.sort
 import com.mongodb.client.model.Filters.*
 import com.mongodb.client.model.Projections.fields
 import com.mongodb.client.model.Projections.include
@@ -12,6 +16,10 @@ import io.github.whdt.core.hdt.model.ModelName
 import io.github.whdt.core.hdt.model.property.Property
 import io.github.whdt.core.hdt.model.property.PropertyId
 import io.github.whdt.core.hdt.model.property.PropertyName
+import io.github.whdt.core.hdt.model.property.PropertyValue
+import io.github.whdt.db.property.query.ComparisonOperator
+import io.github.whdt.db.property.query.Comparison
+import io.github.whdt.db.property.query.PropertyComparison
 import io.github.whdt.db.property.query.PropertyStatsPerHdt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -19,6 +27,7 @@ import org.bson.Document
 import org.bson.conversions.Bson
 import java.time.Instant
 import java.util.*
+import kotlin.collections.mutableListOf
 
 class PropertyEventService(val db: MongoDatabase) {
     var collection: MongoCollection<Document>
@@ -68,6 +77,15 @@ class PropertyEventService(val db: MongoDatabase) {
     }
 
     private suspend fun findPropertiesWithFilter(
+        filter: Bson,
+    ): List<PropertyEventDocument> = withContext(Dispatchers.IO) {
+        collection.find(filter)
+            .projection(fields(include("metaField", "timeField", "value")))
+            .toList()
+            .mapNotNull(PropertyEventDocument::fromDocument)
+    }
+
+    private suspend fun findPropertiesWithBaseMatch(
         hdtId: String? = null,
         modelId: String? = null,
         propertyId: String? = null,
@@ -76,10 +94,7 @@ class PropertyEventService(val db: MongoDatabase) {
         to: Instant? = null
     ): List<PropertyEventDocument> = withContext(Dispatchers.IO) {
         val filters = baseMatch(hdtId, modelId, propertyId, propertyName, from, to)
-        collection.find(filters)
-            .projection(fields(include("metaField", "timeField", "value")))
-            .toList()
-            .mapNotNull(PropertyEventDocument::fromDocument)
+        findPropertiesWithFilter(filters)
     }
 
     suspend fun propertiesById(
@@ -87,7 +102,7 @@ class PropertyEventService(val db: MongoDatabase) {
         from: Instant,
         to: Instant
     ): List<PropertyEventDocument> = withContext(Dispatchers.IO) {
-        findPropertiesWithFilter(propertyId = propertyId.value, from = from, to = to)
+        findPropertiesWithBaseMatch(propertyId = propertyId.value, from = from, to = to)
     }
 
     suspend fun propertiesByName(
@@ -96,13 +111,13 @@ class PropertyEventService(val db: MongoDatabase) {
         from: Instant,
         to: Instant,
     ): List<PropertyEventDocument> = withContext(Dispatchers.IO) {
-        findPropertiesWithFilter(hdtId = hdtId.id, propertyName = propertyName.value, from = from, to = to)
+        findPropertiesWithBaseMatch(hdtId = hdtId.id, propertyName = propertyName.value, from = from, to = to)
     }
 
     suspend fun propertiesByHdtId(
         hdtId: HdtId,
     ): List<PropertyEventDocument> = withContext(Dispatchers.IO) {
-        findPropertiesWithFilter(hdtId = hdtId.id)
+        findPropertiesWithBaseMatch(hdtId = hdtId.id)
     }
 
     suspend fun propertyHistory(
@@ -134,15 +149,15 @@ class PropertyEventService(val db: MongoDatabase) {
         if (to != null) filters += lt("timeField", Date.from(to))
 
         val pipeline = listOf(
-            Aggregates.match(and(filters)),
-            Aggregates.group(
+            match(and(filters)),
+            group(
                 $$"$metaField.hdtId",
                 Accumulators.sum("count", 1),
                 Accumulators.avg("avg", $$"$value"),
                 Accumulators.min("min", $$"$value"),
                 Accumulators.max("max", $$"$value")
             ),
-            Aggregates.sort(Sorts.ascending("_id"))
+            sort(Sorts.ascending("_id"))
         )
 
         collection.aggregate(pipeline).map { doc ->
@@ -154,5 +169,72 @@ class PropertyEventService(val db: MongoDatabase) {
                 max = (doc["max"] as? Number)?.toDouble()
             )
         }.toList()
+    }
+
+    private fun buildValueFilter(
+        operator: ComparisonOperator,
+        value: PropertyValue
+    ): Bson {
+        fun applyOperator(field: String, v: Any): Bson =
+            when (operator) {
+                ComparisonOperator.GT  -> gt(field, v)
+                ComparisonOperator.GTE -> gte(field, v)
+                ComparisonOperator.LT  -> lt(field, v)
+                ComparisonOperator.LTE -> lte(field, v)
+                ComparisonOperator.EQ  -> eq(field, v)
+            }
+        return when (value) {
+            is PropertyValue.IntPropertyValue -> applyOperator("value", value.value)
+            is PropertyValue.DoublePropertyValue -> applyOperator("value", value.value)
+            is PropertyValue.FloatPropertyValue -> applyOperator("value", value.value)
+            is PropertyValue.LongPropertyValue -> applyOperator("value", value.value)
+            is PropertyValue.StringPropertyValue -> applyOperator("value", value.value)
+            is PropertyValue.BooleanPropertyValue -> applyOperator("value", value.value)
+            PropertyValue.EmptyPropertyValue ->
+                throw IllegalArgumentException("Cannot compare empty property value")
+        }
+    }
+
+    suspend fun propertiesByComparison(
+        propertyName: PropertyName,
+        comparisons: List<Comparison>,
+    ): List<PropertyEventDocument> = withContext(Dispatchers.IO) {
+        val valueFilter = and(
+            comparisons.map { buildValueFilter(it.comparison, it.value) }.toList()
+        )
+        val filter = and(
+            valueFilter,
+            baseMatch(propertyName = propertyName.value),
+        )
+        findPropertiesWithFilter(filter)
+    }
+
+    suspend fun hdtIdsByComparisons(
+        propertyComparisons: List<PropertyComparison>,
+        modelId: ModelId? = null,
+        from: Instant? = null,
+        to: Instant? = null
+    ): List<HdtId> = withContext(Dispatchers.IO) {
+        fun buildPropertyComparisonFilter(pc: PropertyComparison): Bson =
+            and(
+                eq("metaField.propertyName", pc.propertyName.value),
+                buildValueFilter(pc.comparison, pc.value)
+            )
+        val propertyNames = propertyComparisons.map { it.propertyName.value }.distinct()
+        val outerFilters = baseMatch(modelId = modelId?.value, from = from, to = to)
+        val comparisonOrFilter = propertyComparisons.map(::buildPropertyComparisonFilter)
+        val firstMatch = and(comparisonOrFilter + outerFilters)
+
+        val pipeline = listOf(
+            match(firstMatch),
+            group(
+                $$"$metaField.hdtId",
+                addToSet("matchedProperties", $$"$metaField.propertyName")
+            ),
+            match(all("matchedProperties", propertyNames))
+        )
+        collection.aggregate(pipeline)
+            .mapNotNull { it.getString("_id")?.let(::HdtId) }
+            .toList()
     }
 }
