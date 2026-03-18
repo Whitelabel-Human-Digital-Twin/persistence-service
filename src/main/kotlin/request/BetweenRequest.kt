@@ -1,4 +1,4 @@
-package io.github.whdt.query
+package io.github.whdt.request
 
 import io.github.whdt.core.hdt.model.property.PropertyName
 import io.github.whdt.core.hdt.model.property.PropertyValue
