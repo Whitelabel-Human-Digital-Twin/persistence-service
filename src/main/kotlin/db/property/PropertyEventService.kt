@@ -7,6 +7,8 @@ import com.mongodb.client.model.Filters.*
 import com.mongodb.client.model.Projections.fields
 import com.mongodb.client.model.Projections.include
 import io.github.whdt.core.hdt.HdtId
+import io.github.whdt.core.hdt.model.ModelId
+import io.github.whdt.core.hdt.model.ModelName
 import io.github.whdt.core.hdt.model.property.Property
 import io.github.whdt.core.hdt.model.property.PropertyId
 import io.github.whdt.core.hdt.model.property.PropertyName
@@ -114,18 +116,20 @@ class PropertyEventService(val db: MongoDatabase) {
             .mapNotNull(PropertyEventDocument::fromDocument)
     }
 
-    suspend fun avgMinMaxForPropertyByHdt(
-        hdtIds: List<String>,
-        modelId: String,
-        propertyId: String,
+    suspend fun propertyAggregateStats(
+        hdtIds: List<HdtId>,
+        modelIds: List<ModelId>,
+        modelNames: List<ModelName>,
+        propertyName: PropertyName,
         from: Instant? = null,
         to: Instant? = null
     ): List<PropertyStatsPerHdt> = withContext(Dispatchers.IO) {
         val filters = mutableListOf<Bson>(
-            `in`("metaField.hdtId", hdtIds),
-            eq("metaField.modelId", modelId),
-            eq("metaField.propertyId", propertyId)
+            eq("metaField.propertyName", propertyName.value),
         )
+        if (hdtIds.isNotEmpty()) filters += `in`("metaField.hdtId", hdtIds.map { it.id })
+        if (modelIds.isNotEmpty()) filters += `in`("metaField.modelId", modelIds.map { it.value })
+        if (modelNames.isNotEmpty()) filters += `in`("metaField.modelName", modelNames.map { it.value })
         if (from != null) filters += gte("timeField", Date.from(from))
         if (to != null) filters += lt("timeField", Date.from(to))
 
