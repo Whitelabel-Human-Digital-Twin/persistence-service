@@ -7,6 +7,7 @@ import io.github.whdt.core.hdt.model.property.Property
 import io.github.whdt.db.hdt.HdtService
 import io.github.whdt.db.model.ModelService
 import io.github.whdt.db.property.PropertyEventService
+import io.github.whdt.request.PropertyStatsRequest
 import io.github.whdt.request.PropertyValuesRequest
 import io.ktor.http.*
 import io.ktor.server.application.*
@@ -188,6 +189,19 @@ fun Application.configureRouting() {
                 propertyName = req.propertyName!!,
             )
             call.respond(HttpStatusCode.OK, values)
+        }
+
+        post("/api/hdts/events/aggregate") {
+            val req = call.receive<PropertyStatsRequest>()
+            val stats = propertyEventService.propertyAggregateStats(
+                req.hdtIds,
+                req.modelIds,
+                req.modelNames,
+                req.propertyName,
+                req.from?.toJavaInstant(),
+                req.to?.toJavaInstant()
+            )
+            call.respond(HttpStatusCode.OK, stats)
         }
 
         /* OLD API
