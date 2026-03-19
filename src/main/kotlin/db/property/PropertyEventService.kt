@@ -56,6 +56,7 @@ class PropertyEventService(val db: MongoDatabase) {
     private fun baseMatch(
         hdtId: String? = null,
         modelId: String? = null,
+        modelName: String? = null,
         propertyId: String? = null,
         propertyName: String? = null,
         from: Instant? = null,
@@ -64,6 +65,7 @@ class PropertyEventService(val db: MongoDatabase) {
         val filters = mutableListOf<Bson>()
         if (hdtId != null) filters += eq("metaField.hdtId", hdtId)
         if (modelId != null) filters += eq("metaField.modelId", modelId)
+        if (modelName != null) filters += eq("metaField.modelName", modelName)
         if (propertyId != null) filters += eq("metaField.propertyId", propertyId)
         if (propertyName != null) filters += eq("metaField.propertyName", propertyName)
         if (from != null) filters += gte("timeField", Date.from(from))
@@ -88,12 +90,13 @@ class PropertyEventService(val db: MongoDatabase) {
     private suspend fun findPropertiesWithBaseMatch(
         hdtId: String? = null,
         modelId: String? = null,
+        modelName: String? = null,
         propertyId: String? = null,
         propertyName: String? = null,
         from: Instant? = null,
         to: Instant? = null
     ): List<PropertyEventDocument> = withContext(Dispatchers.IO) {
-        val filters = baseMatch(hdtId, modelId, propertyId, propertyName, from, to)
+        val filters = baseMatch(hdtId, modelId, modelName, propertyId, propertyName, from, to)
         findPropertiesWithFilter(filters)
     }
 
@@ -211,7 +214,7 @@ class PropertyEventService(val db: MongoDatabase) {
 
     suspend fun hdtIdsByComparisons(
         propertyComparisons: List<PropertyComparison>,
-        modelId: ModelId? = null,
+        modelNames: List<ModelName>? = null,
         from: Instant? = null,
         to: Instant? = null
     ): List<HdtId> = withContext(Dispatchers.IO) {
@@ -221,21 +224,24 @@ class PropertyEventService(val db: MongoDatabase) {
                 buildValueFilter(pc.comparison, pc.value)
             )
         val propertyNames = propertyComparisons.map { it.propertyName.value }.distinct()
-        val outerFilters = baseMatch(modelId = modelId?.value, from = from, to = to)
-        val comparisonOrFilter = propertyComparisons.map(::buildPropertyComparisonFilter)
-        val firstMatch = and(comparisonOrFilter + outerFilters)
-
+        val outerFilters = mutableListOf<Bson>(baseMatch(from = from, to = to))
+        if (!modelNames.isNullOrEmpty())
+            outerFilters += `in`("metaField.modelName", modelNames.map { it.value })
+        val comparisonOrFilter = or(propertyComparisons.map(::buildPropertyComparisonFilter))
+        val finalMatch = and(
+            outerFilters + comparisonOrFilter
+        )
         val pipeline = listOf(
-            match(firstMatch),
+            match(finalMatch),
             group(
                 $$"$metaField.hdtId",
                 addToSet("matchedProperties", $$"$metaField.propertyName")
             ),
             match(all("matchedProperties", propertyNames))
         )
-        collection.aggregate(pipeline)
-            .mapNotNull { it.getString("_id")?.let(::HdtId) }
-            .toList()
-            .sortedBy(HdtId::id)
+       collection.aggregate(pipeline)
+           .mapNotNull { it.getString("_id")?.let(::HdtId) }
+           .toList()
+           .sortedBy(HdtId::id)
     }
 }

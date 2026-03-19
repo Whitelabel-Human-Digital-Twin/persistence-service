@@ -215,7 +215,7 @@ fun Application.configureRouting() {
             println(req.toString())
             val stats = propertyEventService.hdtIdsByComparisons(
                 req.comparisons,
-                req.modelId,
+                req.modelNames,
                 req.from?.toJavaInstant(),
                 req.to?.toJavaInstant()
             )
