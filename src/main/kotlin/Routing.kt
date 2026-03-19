@@ -105,6 +105,11 @@ fun Application.configureRouting() {
             } ?: call.respond(HttpStatusCode.NotFound)
         }
 
+        get("/api/hdts/models") {
+            val models = modelService.findAll()
+            call.respond(HttpStatusCode.OK, models)
+        }
+
         post("/api/hdts/models") {
             val model = call.receive<Model>()
             val id = modelService.create(model)
