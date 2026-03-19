@@ -168,7 +168,7 @@ class PropertyEventService(val db: MongoDatabase) {
                 min = (doc["min"] as? Number)?.toDouble(),
                 max = (doc["max"] as? Number)?.toDouble()
             )
-        }.toList()
+        }.toList().sortedBy { it.hdtId }
     }
 
     private fun buildValueFilter(
@@ -236,5 +236,6 @@ class PropertyEventService(val db: MongoDatabase) {
         collection.aggregate(pipeline)
             .mapNotNull { it.getString("_id")?.let(::HdtId) }
             .toList()
+            .sortedBy(HdtId::id)
     }
 }
