@@ -4,6 +4,7 @@ import com.mongodb.client.MongoCollection
 import com.mongodb.client.MongoDatabase
 import com.mongodb.client.model.*
 import com.mongodb.client.model.Accumulators.addToSet
+import com.mongodb.client.model.Accumulators.push
 import com.mongodb.client.model.Aggregates.group
 import com.mongodb.client.model.Aggregates.match
 import com.mongodb.client.model.Aggregates.sort
@@ -212,7 +213,7 @@ class PropertyEventService(val db: MongoDatabase) {
         findPropertiesWithFilter(filter)
     }
 
-    suspend fun hdtIdsByComparisons(
+    suspend fun propertiesByComparisonsAggregate(
         propertyComparisons: List<PropertyComparison>,
         modelNames: List<ModelName>? = null,
         from: Instant? = null,
@@ -224,7 +225,7 @@ class PropertyEventService(val db: MongoDatabase) {
                 buildValueFilter(pc.comparison, pc.value)
             )
         val propertyNames = propertyComparisons.map { it.propertyName.value }.distinct()
-        val outerFilters = mutableListOf<Bson>(baseMatch(from = from, to = to))
+        val outerFilters = mutableListOf(baseMatch(from = from, to = to))
         if (!modelNames.isNullOrEmpty())
             outerFilters += `in`("metaField.modelName", modelNames.map { it.value })
         val comparisonOrFilter = or(propertyComparisons.map(::buildPropertyComparisonFilter))
@@ -235,11 +236,21 @@ class PropertyEventService(val db: MongoDatabase) {
             match(finalMatch),
             group(
                 $$"$metaField.hdtId",
-                addToSet("matchedProperties", $$"$metaField.propertyName")
+                addToSet("matchedProperties", $$"$metaField.propertyName"),
+                push(
+                    "matchedEvents",
+                    Document()
+                        .append("propertyName", $$"$metaField.propertyName")
+                        .append("value", $$"$value")
+                        .append("timeField", $$"$timeField")
+                )
             ),
             match(all("matchedProperties", propertyNames))
         )
-       collection.aggregate(pipeline)
+
+        val res = collection.aggregate(pipeline)
+        res.forEach { println(it.toJson()) }
+        res
            .mapNotNull { it.getString("_id")?.let(::HdtId) }
            .toList()
            .sortedBy(HdtId::id)
