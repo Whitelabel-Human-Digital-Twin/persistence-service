@@ -22,6 +22,7 @@ import io.github.whdt.db.property.query.ComparisonOperator
 import io.github.whdt.db.property.query.Comparison
 import io.github.whdt.db.property.query.PropertyComparison
 import io.github.whdt.db.property.query.PropertyStatsPerHdt
+import io.github.whdt.request.PropertiesByComparisonsAggregateResponse
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.bson.Document
@@ -218,7 +219,7 @@ class PropertyEventService(val db: MongoDatabase) {
         modelNames: List<ModelName>? = null,
         from: Instant? = null,
         to: Instant? = null
-    ): List<HdtId> = withContext(Dispatchers.IO) {
+    ): List<PropertiesByComparisonsAggregateResponse> = withContext(Dispatchers.IO) {
         fun buildPropertyComparisonFilter(pc: PropertyComparison): Bson =
             and(
                 eq("metaField.propertyName", pc.propertyName.value),
@@ -247,12 +248,11 @@ class PropertyEventService(val db: MongoDatabase) {
             ),
             match(all("matchedProperties", propertyNames))
         )
-
-        val res = collection.aggregate(pipeline)
-        res.forEach { println(it.toJson()) }
-        res
-           .mapNotNull { it.getString("_id")?.let(::HdtId) }
+        collection.aggregate(pipeline)
+            .mapNotNull {
+               PropertiesByComparisonsAggregateResponse.fromDocument(it)
+           }
            .toList()
-           .sortedBy(HdtId::id)
+           .sortedBy { it.hdtId.id }
     }
 }
