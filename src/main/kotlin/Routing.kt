@@ -146,6 +146,16 @@ fun Application.configureRouting() {
             }
         }
 
+        get("/api/hdts/{id}/models") {
+            val id = call.parameters["id"] ?: throw IllegalArgumentException("No ID found")
+            val res = modelService.findByHdtId(HdtId(id))
+            if (res.isNotEmpty()) {
+                call.respond(HttpStatusCode.OK, res)
+            } else {
+                call.respond(HttpStatusCode.NotFound)
+            }
+        }
+
         get("/api/hdts/{id}/events") {
             val id = call.parameters["id"] ?: throw IllegalArgumentException("No ID found")
             val res = propertyEventService.propertiesByHdtId(HdtId(id))
