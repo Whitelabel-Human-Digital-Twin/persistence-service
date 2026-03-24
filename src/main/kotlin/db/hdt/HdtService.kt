@@ -6,7 +6,6 @@ import com.mongodb.client.model.Filters.eq
 import com.mongodb.client.model.ReplaceOneModel
 import com.mongodb.client.model.ReplaceOptions
 import io.github.whdt.core.hdt.HumanDigitalTwin
-import io.github.whdt.db.model.ModelDocument
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.bson.Document
