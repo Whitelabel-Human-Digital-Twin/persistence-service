@@ -6,6 +6,7 @@ import com.mongodb.client.model.Filters.eq
 import com.mongodb.client.model.ReplaceOneModel
 import com.mongodb.client.model.ReplaceOptions
 import io.github.whdt.core.hdt.HumanDigitalTwin
+import io.github.whdt.db.model.ModelDocument
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.bson.Document
@@ -43,15 +44,15 @@ class HdtService(private val database: MongoDatabase) {
     }
 
     suspend fun upsertMany(hdts: List<HumanDigitalTwin>): Boolean = withContext(Dispatchers.IO) {
-        val docs = hdts.map { HumanDigitalTwinDocument.fromHumanDigitalTwin(it) }.map { it.toDocument() }
-        val operations = docs.map {
-            val id = it["hdtId"]
+        val operations = hdts.map { hdt ->
+            val doc = HumanDigitalTwinDocument.fromHumanDigitalTwin(hdt).toDocument()
             ReplaceOneModel(
-                eq("hdtId", id),
-                it,
+                eq("modelId", hdt.hdtId.id),
+                doc,
                 ReplaceOptions().upsert(true)
             )
         }
+
         val res = collection.bulkWrite(operations)
         res.wasAcknowledged()
     }

@@ -3,8 +3,11 @@ package io.github.whdt.db.model
 import com.mongodb.client.MongoCollection
 import com.mongodb.client.MongoDatabase
 import com.mongodb.client.model.Filters.eq
+import com.mongodb.client.model.IndexOptions
+import com.mongodb.client.model.Indexes
 import com.mongodb.client.model.ReplaceOneModel
 import com.mongodb.client.model.ReplaceOptions
+import io.github.whdt.core.hdt.HdtId
 import io.github.whdt.core.hdt.model.Model
 import io.github.whdt.core.hdt.model.ModelName
 import kotlinx.coroutines.Dispatchers
@@ -18,6 +21,7 @@ class ModelService(private val database: MongoDatabase) {
     init {
         database.createCollection("models")
         collection = database.getCollection("models")
+        //collection.createIndex(Indexes.ascending("modelId"), IndexOptions().unique(true))
     }
 
     suspend fun create(model: Model): String = withContext(Dispatchers.IO) {
@@ -43,15 +47,15 @@ class ModelService(private val database: MongoDatabase) {
     }
 
     suspend fun upsertMany(models: List<Model>): Boolean = withContext(Dispatchers.IO) {
-        val docs = models.map { ModelDocument.fromWhdtModel(it) }.map { it.toDocument() }
-        val operations = docs.map {
-            val id = it["modelId"]
+        val operations = models.map { model ->
+            val doc = ModelDocument.fromWhdtModel(model).toDocument()
             ReplaceOneModel(
-                eq("modelId", id),
-                it,
+                eq("modelId", model.id.value),
+                doc,
                 ReplaceOptions().upsert(true)
             )
         }
+
         val res = collection.bulkWrite(operations)
         res.wasAcknowledged()
     }
@@ -65,10 +69,14 @@ class ModelService(private val database: MongoDatabase) {
     }
 
     suspend fun findAll(): List<ModelDocument> = withContext(Dispatchers.IO) {
-        collection.find().toList().map { ModelDocument.fromDocument(it) }.toList()
+        collection.find().toList().map(ModelDocument::fromDocument)
     }
 
     suspend fun findByName(modelName: ModelName): List<ModelDocument> = withContext(Dispatchers.IO) {
         findAll().filter { it.modelName == modelName }
+    }
+
+    suspend fun findByHdtId(hdtId: HdtId): List<ModelDocument> = withContext(Dispatchers.IO) {
+        collection.find(eq("hdtId", hdtId.id)).toList().map(ModelDocument::fromDocument)
     }
 }
