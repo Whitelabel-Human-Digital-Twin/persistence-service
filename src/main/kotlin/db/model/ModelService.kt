@@ -3,6 +3,8 @@ package io.github.whdt.db.model
 import com.mongodb.client.MongoCollection
 import com.mongodb.client.MongoDatabase
 import com.mongodb.client.model.Filters.eq
+import com.mongodb.client.model.IndexOptions
+import com.mongodb.client.model.Indexes
 import com.mongodb.client.model.ReplaceOneModel
 import com.mongodb.client.model.ReplaceOptions
 import io.github.whdt.core.hdt.HdtId
@@ -19,7 +21,7 @@ class ModelService(private val database: MongoDatabase) {
     init {
         database.createCollection("models")
         collection = database.getCollection("models")
-        //collection.createIndex(Indexes.ascending("modelId"), IndexOptions().unique(true))
+        collection.createIndex(Indexes.ascending("modelId"), IndexOptions().unique(true))
     }
 
     suspend fun create(model: Model): String = withContext(Dispatchers.IO) {
