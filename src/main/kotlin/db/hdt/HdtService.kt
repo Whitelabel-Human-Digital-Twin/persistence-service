@@ -46,7 +46,7 @@ class HdtService(private val database: MongoDatabase) {
         val operations = hdts.map { hdt ->
             val doc = HumanDigitalTwinDocument.fromHumanDigitalTwin(hdt).toDocument()
             ReplaceOneModel(
-                eq("modelId", hdt.hdtId.id),
+                eq("hdtId", hdt.hdtId.id),
                 doc,
                 ReplaceOptions().upsert(true)
             )
