@@ -10,16 +10,23 @@ import io.github.whdt.db.property.PropertyEventService
 import io.github.whdt.request.PropertiesByComparisonsAggregateRequest
 import io.github.whdt.request.PropertyStatsRequest
 import io.github.whdt.request.PropertyValuesRequest
+import io.github.whdt.routing.hdt.humanDigitalTwinRoutes
 import io.ktor.http.*
+import io.ktor.openapi.OpenApiDoc
 import io.ktor.openapi.OpenApiInfo
 import io.ktor.server.application.*
 import io.ktor.server.plugins.openapi.openAPI
+import io.ktor.server.plugins.swagger.swaggerUI
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.routing.openapi.OpenApiDocSource
+import io.ktor.server.routing.openapi.hide
+import io.ktor.server.routing.openapi.plus
+import io.ktor.utils.io.ExperimentalKtorApi
 import kotlin.time.toJavaInstant
 
+@OptIn(ExperimentalKtorApi::class)
 fun Application.configureRouting() {
     val mongoDatabase = connectToMongoDB()
     val hdtService = HdtService(mongoDatabase)
@@ -42,79 +49,22 @@ fun Application.configureRouting() {
             }
         }
 
-        post("/api/hdts") {
-            val hdt = call.receive<HumanDigitalTwin>()
-            // Create HumanDigitalTwin
-            val id = hdtService.create(hdt)
-            // Create Models
-            modelService.insertMany(hdt.models)
-            // Create Property Events
-            val properties = hdt.models.flatMap { it.properties }
-            propertyEventService.insertMany(hdt.hdtId, properties)
-            // Respond
-            call.respond(HttpStatusCode.Created, id)
-        }
+        get("/docs.json") {
+            val doc = OpenApiDoc(
+                info = OpenApiInfo("My API", "1.0.0")
+            ) + call.application.routingRoot.descendants()
 
-        post("/api/hdts/many") {
-            val hdts = call.receive<List<HumanDigitalTwin>>()
-            val resHdt = hdtService.insertMany(hdts)
-            if (!resHdt) return@post call.respond(HttpStatusCode.InternalServerError)
+            call.respond(doc)
+        }.hide()
 
-            val models = hdts.flatMap { it.models }
-            val resModel = modelService.insertMany(models)
-            if (!resModel) return@post call.respond(HttpStatusCode.InternalServerError)
-
-            val resProperty = mapPropertiesFromHdts(hdts) { id, p ->
-                propertyEventService.insertMany(id, p)
+        swaggerUI("/swaggerUI") {
+            info = OpenApiInfo("My API", "1.0")
+            source = OpenApiDocSource.Routing(ContentType.Application.Json) {
+                routingRoot.descendants()
             }
-            if (!resProperty) return@post call.respond(HttpStatusCode.InternalServerError)
-
-            call.respond(HttpStatusCode.OK)
         }
 
-        put("/api/hdts/many") {
-            val hdts = call.receive<List<HumanDigitalTwin>>()
-            val resHdt = hdtService.upsertMany(hdts)
-            if (!resHdt) return@put call.respond(HttpStatusCode.InternalServerError)
-
-            val models = hdts.flatMap { it.models }
-            val resModel = modelService.upsertMany(models)
-            if (!resModel) return@put call.respond(HttpStatusCode.InternalServerError)
-
-            val resProperty = mapPropertiesFromHdts(hdts) { id, p ->
-                propertyEventService.insertMany(id, p)
-            }
-            if (!resProperty) return@put call.respond(HttpStatusCode.InternalServerError)
-
-            call.respond(HttpStatusCode.OK)
-        }
-
-        get("/api/hdts") {
-            val hdts = hdtService.findAll()
-            call.respond(HttpStatusCode.OK, hdts)
-        }
-
-        get("/api/hdts/{id}") {
-            val id = call.parameters["id"] ?: throw IllegalArgumentException("No ID found")
-            hdtService.read(id)?.let { hdt ->
-                call.respond(HttpStatusCode.OK, hdt)
-            } ?: call.respond(HttpStatusCode.NotFound)
-        }
-
-        put("/api/hdts/{id}") {
-            val id = call.parameters["id"] ?: throw IllegalArgumentException("No ID found")
-            val hdt = call.receive<HumanDigitalTwin>()
-            hdtService.update(id, hdt)?.let {
-                call.respond(HttpStatusCode.OK)
-            } ?: call.respond(HttpStatusCode.NotFound)
-        }
-
-        delete("/api/hdts/{id}") {
-            val id = call.parameters["id"] ?: throw IllegalArgumentException("No ID found")
-            hdtService.delete(id)?.let {
-                call.respond(HttpStatusCode.OK)
-            } ?: call.respond(HttpStatusCode.NotFound)
-        }
+        humanDigitalTwinRoutes(hdtService, modelService, propertyEventService)
 
         get("/api/hdts/models") {
             val models = modelService.findAll()
