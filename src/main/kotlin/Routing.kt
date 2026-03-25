@@ -241,26 +241,5 @@ fun Application.configureRouting() {
             )
             call.respond(HttpStatusCode.OK, stats)
         }
-
-        /* OLD API
-        get("/api/hdts/findByPropertyName/{propertyName}") {
-            val propertyNameRaw = call.parameters["propertyName"] ?: throw IllegalArgumentException("No property name found")
-            val hdts = propertyService.findByName(PropertyName(propertyNameRaw)).map { FindByNameResponse(it.hdtId, it.propertyName, it.value.toString()) }
-            call.respond(HttpStatusCode.OK, hdts)
-        }
-
-        post("/api/hdts/findByPropertyComparison") {
-            val request = call.receive<PropertyComparisonRequest>()
-            val result = propertyService.findByComparison(
-                    request.propertyName,
-                    request.value,
-                    request.operator,
-                ).map {
-                val value = it.value
-                PropertyComparisonResponse(it.hdtId, it.propertyName, value.unwrapAndStringify())
-            }
-            call.respond(HttpStatusCode.OK, result)
-        }
-         */
     }
 }
