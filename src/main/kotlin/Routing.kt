@@ -11,10 +11,13 @@ import io.github.whdt.request.PropertiesByComparisonsAggregateRequest
 import io.github.whdt.request.PropertyStatsRequest
 import io.github.whdt.request.PropertyValuesRequest
 import io.ktor.http.*
+import io.ktor.openapi.OpenApiInfo
 import io.ktor.server.application.*
+import io.ktor.server.plugins.openapi.openAPI
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import io.ktor.server.routing.openapi.OpenApiDocSource
 import kotlin.time.toJavaInstant
 
 fun Application.configureRouting() {
@@ -31,6 +34,14 @@ fun Application.configureRouting() {
     }
 
     routing {
+
+        openAPI("/api/openapi") {
+            info = OpenApiInfo("My API", "1.0")
+            source = OpenApiDocSource.Routing {
+                routingRoot.descendants()
+            }
+        }
+
         post("/api/hdts") {
             val hdt = call.receive<HumanDigitalTwin>()
             // Create HumanDigitalTwin
