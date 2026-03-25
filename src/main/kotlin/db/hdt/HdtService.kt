@@ -19,12 +19,12 @@ class HdtService(private val database: MongoDatabase) {
         collection = database.getCollection("hdt")
     }
 
-    suspend fun create(hdt: HumanDigitalTwin): String = withContext(Dispatchers.IO) {
+    suspend fun create(hdt: HumanDigitalTwin): HumanDigitalTwinDocument = withContext(Dispatchers.IO) {
         val hdtDocument = HumanDigitalTwinDocument.fromHumanDigitalTwin(hdt)
         val doc = hdtDocument.toDocument()
         doc["_id"] = hdtDocument.hdtId.id
         collection.insertOne(doc)
-        doc["_id"].toString()
+        HumanDigitalTwinDocument.fromDocument(doc)
     }
 
     suspend fun upsert(hdt: HumanDigitalTwin): Boolean = withContext(Dispatchers.IO) {
