@@ -22,7 +22,7 @@ import io.github.whdt.routing.query.event.comparison.ComparisonOperator
 import io.github.whdt.routing.query.event.comparison.Comparison
 import io.github.whdt.routing.query.event.comparison.PropertyComparison
 import io.github.whdt.routing.query.event.stats.PropertyStatsPerHdt
-import io.github.whdt.request.PropertiesByComparisonsAggregateResponse
+import io.github.whdt.routing.query.event.comparison.PropertiesByComparisonsAggregateResponse
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.bson.Document
