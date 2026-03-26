@@ -1,14 +1,20 @@
 package io.github.whdt.routing.query.event.values
 
+import io.github.whdt.db.property.PropertyEventDocument
 import io.github.whdt.db.property.PropertyEventService
+import io.github.whdt.routing.query.event.stats.PropertyStatsPerHdt
 import io.ktor.http.HttpStatusCode
+import io.ktor.openapi.jsonSchema
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
+import io.ktor.server.routing.openapi.describe
 import io.ktor.server.routing.post
 import io.ktor.server.routing.route
+import io.ktor.utils.io.ExperimentalKtorApi
 import kotlin.time.toJavaInstant
 
+@OptIn(ExperimentalKtorApi::class)
 fun Route.propertyValuesRoutes(
     propertyEventService: PropertyEventService
 ) {
@@ -21,6 +27,19 @@ fun Route.propertyValuesRoutes(
                 req.to!!.toJavaInstant()
             )
             call.respond(HttpStatusCode.OK, values)
+        }.describe {
+            operationId = "query/event/values/byId"
+            summary = "Query Events by Id"
+
+            requestBody {
+                schema = jsonSchema<List<PropertyValuesRequest>>()
+            }
+
+            responses {
+                HttpStatusCode.OK {
+                    schema = jsonSchema<List<PropertyEventDocument>>()
+                }
+            }
         }
 
         post("/valuesByName") {
@@ -32,6 +51,19 @@ fun Route.propertyValuesRoutes(
                 req.to!!.toJavaInstant()
             )
             call.respond(HttpStatusCode.OK, values)
+        }.describe {
+            operationId = "query/event/values/byName"
+            summary = "Query Events by Name"
+
+            requestBody {
+                schema = jsonSchema<List<PropertyValuesRequest>>()
+            }
+
+            responses {
+                HttpStatusCode.OK {
+                    schema = jsonSchema<List<PropertyEventDocument>>()
+                }
+            }
         }
 
         post("/history") {
@@ -41,6 +73,19 @@ fun Route.propertyValuesRoutes(
                 propertyName = req.propertyName!!,
             )
             call.respond(HttpStatusCode.OK, values)
+        }.describe {
+            operationId = "query/event/values/history"
+            summary = "Query Event history for a certain HDT"
+
+            requestBody {
+                schema = jsonSchema<List<PropertyValuesRequest>>()
+            }
+
+            responses {
+                HttpStatusCode.OK {
+                    schema = jsonSchema<List<PropertyEventDocument>>()
+                }
+            }
         }
     }
 }
