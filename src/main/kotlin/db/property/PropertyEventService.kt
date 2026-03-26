@@ -18,10 +18,10 @@ import io.github.whdt.core.hdt.model.property.Property
 import io.github.whdt.core.hdt.model.property.PropertyId
 import io.github.whdt.core.hdt.model.property.PropertyName
 import io.github.whdt.core.hdt.model.property.PropertyValue
-import io.github.whdt.db.property.query.ComparisonOperator
-import io.github.whdt.db.property.query.Comparison
-import io.github.whdt.db.property.query.PropertyComparison
-import io.github.whdt.db.property.query.PropertyStatsPerHdt
+import io.github.whdt.routing.query.event.comparison.ComparisonOperator
+import io.github.whdt.routing.query.event.comparison.Comparison
+import io.github.whdt.routing.query.event.comparison.PropertyComparison
+import io.github.whdt.routing.query.event.stats.PropertyStatsPerHdt
 import io.github.whdt.request.PropertiesByComparisonsAggregateResponse
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

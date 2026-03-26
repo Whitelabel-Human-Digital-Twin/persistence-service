@@ -24,11 +24,11 @@ class ModelService(private val database: MongoDatabase) {
         collection.createIndex(Indexes.ascending("modelId"), IndexOptions().unique(true))
     }
 
-    suspend fun create(model: Model): String = withContext(Dispatchers.IO) {
+    suspend fun create(model: Model): ModelDocument = withContext(Dispatchers.IO) {
         val modelDoc = ModelDocument.fromWhdtModel(model)
         val doc = modelDoc.toDocument()
         collection.insertOne(doc)
-        doc["_id"].toString()
+        ModelDocument.fromDocument(doc)
     }
 
     suspend fun insertMany(models: List<Model>): Boolean = withContext(Dispatchers.IO) {

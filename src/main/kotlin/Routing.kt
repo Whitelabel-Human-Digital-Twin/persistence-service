@@ -8,9 +8,12 @@ import io.github.whdt.db.hdt.HdtService
 import io.github.whdt.db.model.ModelService
 import io.github.whdt.db.property.PropertyEventService
 import io.github.whdt.request.PropertiesByComparisonsAggregateRequest
-import io.github.whdt.request.PropertyStatsRequest
-import io.github.whdt.request.PropertyValuesRequest
+import io.github.whdt.routing.query.event.stats.PropertyStatsRequest
+import io.github.whdt.routing.query.event.values.PropertyValuesRequest
 import io.github.whdt.routing.hdt.humanDigitalTwinRoutes
+import io.github.whdt.routing.model.modelsRoutes
+import io.github.whdt.routing.property.propertyEventRoutes
+import io.github.whdt.routing.query.queryRoutes
 import io.ktor.http.*
 import io.ktor.openapi.OpenApiDoc
 import io.ktor.openapi.OpenApiInfo
@@ -33,16 +36,9 @@ fun Application.configureRouting() {
     val modelService = ModelService(mongoDatabase)
     val propertyEventService = PropertyEventService(mongoDatabase)
 
-    suspend fun mapPropertiesFromHdts(hdts: List<HumanDigitalTwin>, mapping: suspend (HdtId, List<Property>) -> Boolean): Boolean {
-        return hdts.map {
-            val properties = it.models.flatMap { m -> m.properties }
-            mapping(it.hdtId, properties)
-        }.foldRight(true){ a, b -> a&&b }
-    }
-
     routing {
 
-        openAPI("/api/openapi") {
+        openAPI("/openapi") {
             info = OpenApiInfo("My API", "1.0")
             source = OpenApiDocSource.Routing {
                 routingRoot.descendants()
@@ -53,7 +49,6 @@ fun Application.configureRouting() {
             val doc = OpenApiDoc(
                 info = OpenApiInfo("My API", "1.0.0")
             ) + call.application.routingRoot.descendants()
-
             call.respond(doc)
         }.hide()
 
@@ -65,131 +60,8 @@ fun Application.configureRouting() {
         }
 
         humanDigitalTwinRoutes(hdtService, modelService, propertyEventService)
-
-        get("/api/hdts/models") {
-            val models = modelService.findAll()
-            call.respond(HttpStatusCode.OK, models)
-        }
-
-        post("/api/hdts/models") {
-            val model = call.receive<Model>()
-            val id = modelService.create(model)
-            call.respond(HttpStatusCode.Created, id)
-        }
-
-        put("/api/hdts/models") {
-            val model = call.receive<Model>()
-            val res = modelService.upsert(model)
-            if (res) {
-                call.respond(HttpStatusCode.OK)
-            } else {
-                call.respond(HttpStatusCode.InternalServerError)
-            }
-        }
-
-        post("/api/hdts/models/many") {
-            val models = call.receive<List<Model>>()
-            val res = modelService.insertMany(models)
-            if (res) {
-                call.respond(HttpStatusCode.OK)
-            } else {
-                call.respond(HttpStatusCode.InternalServerError)
-            }
-        }
-
-        put("/api/hdts/models/many") {
-            val models = call.receive<List<Model>>()
-            val res = modelService.upsertMany(models)
-            if (res) {
-                call.respond(HttpStatusCode.OK)
-            } else {
-                call.respond(HttpStatusCode.InternalServerError)
-            }
-        }
-
-        get("/api/hdts/{id}/models") {
-            val id = call.parameters["id"] ?: throw IllegalArgumentException("No ID found")
-            val res = modelService.findByHdtId(HdtId(id))
-            if (res.isNotEmpty()) {
-                call.respond(HttpStatusCode.OK, res)
-            } else {
-                call.respond(HttpStatusCode.NotFound)
-            }
-        }
-
-        get("/api/hdts/{id}/events") {
-            val id = call.parameters["id"] ?: throw IllegalArgumentException("No ID found")
-            val res = propertyEventService.propertiesByHdtId(HdtId(id))
-            if (res.isNotEmpty()) {
-                call.respond(HttpStatusCode.OK, res)
-            } else {
-                call.respond(HttpStatusCode.NotFound)
-            }
-        }
-
-        post("/api/hdts/events") {
-            val hdt = call.receive<HumanDigitalTwin>()
-            val hdtId = hdt.hdtId
-            val res = propertyEventService.insertMany(hdtId, hdt.models.flatMap { it.properties })
-            if (res) {
-                call.respond(HttpStatusCode.OK)
-            } else {
-                call.respond(HttpStatusCode.InternalServerError)
-            }
-        }
-
-        post("/api/hdts/events/propertyValuesById") {
-            val req = call.receive<PropertyValuesRequest>()
-            val values = propertyEventService.propertiesById(
-                propertyId = req.propertyId!!,
-                req.from!!.toJavaInstant(),
-                req.to!!.toJavaInstant()
-            )
-            call.respond(HttpStatusCode.OK, values)
-        }
-
-        post("/api/hdts/events/propertyValuesByName") {
-            val req = call.receive<PropertyValuesRequest>()
-            val values = propertyEventService.propertiesByName(
-                hdtId = req.hdtId!!,
-                propertyName = req.propertyName!!,
-                req.from!!.toJavaInstant(),
-                req.to!!.toJavaInstant()
-            )
-            call.respond(HttpStatusCode.OK, values)
-        }
-
-        post("/api/hdts/events/propertyHistory") {
-            val req = call.receive<PropertyValuesRequest>()
-            val values = propertyEventService.propertyHistory(
-                hdtId = req.hdtId!!,
-                propertyName = req.propertyName!!,
-            )
-            call.respond(HttpStatusCode.OK, values)
-        }
-
-        post("/api/hdts/events/aggregate") {
-            val req = call.receive<PropertyStatsRequest>()
-            val stats = propertyEventService.propertyAggregateStats(
-                req.hdtIds,
-                req.modelIds,
-                req.modelNames,
-                req.propertyName,
-                req.from?.toJavaInstant(),
-                req.to?.toJavaInstant()
-            )
-            call.respond(HttpStatusCode.OK, stats)
-        }
-
-        post("/api/hdts/aggregate") {
-            val req = call.receive<PropertiesByComparisonsAggregateRequest>()
-            val stats = propertyEventService.propertiesByComparisonsAggregate(
-                req.comparisons,
-                req.modelNames,
-                req.from?.toJavaInstant(),
-                req.to?.toJavaInstant()
-            )
-            call.respond(HttpStatusCode.OK, stats)
-        }
+        modelsRoutes(modelService)
+        propertyEventRoutes(propertyEventService)
+        queryRoutes(propertyEventService)
     }
 }
