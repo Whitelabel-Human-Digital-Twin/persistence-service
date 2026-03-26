@@ -39,7 +39,7 @@ fun Route.humanDigitalTwinRoutes(
 
             responses {
                 HttpStatusCode.OK {
-                    description = "HumanDigitalTwin created"
+                    description = "All Human Digital Twins"
                     schema = jsonSchema<List<HumanDigitalTwinDocument>>()
                 }
             }
@@ -55,7 +55,7 @@ fun Route.humanDigitalTwinRoutes(
             val properties = hdt.models.flatMap { it.properties }
             propertyService.insertMany(hdt.hdtId, properties)
             // Respond
-            call.respond<HumanDigitalTwinDocument>(HttpStatusCode.Created, hdtDoc)
+            call.respond(HttpStatusCode.Created, hdtDoc)
         }.describe {
             operationId = "hdts/post"
             summary = "Create HDT"
