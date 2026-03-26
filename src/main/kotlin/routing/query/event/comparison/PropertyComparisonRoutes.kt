@@ -1,7 +1,6 @@
 package io.github.whdt.routing.query.event.comparison
 
 import io.github.whdt.db.property.PropertyEventService
-import io.github.whdt.request.PropertiesByComparisonsAggregateRequest
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
