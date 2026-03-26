@@ -47,14 +47,13 @@ fun Route.humanDigitalTwinRoutes(
 
         post {
             val hdt = call.receive<HumanDigitalTwin>()
-            // Create HumanDigitalTwin
             val hdtDoc = hdtService.create(hdt)
-            // Create Models
+
             modelService.insertMany(hdt.models)
-            // Create Property Events
+
             val properties = hdt.models.flatMap { it.properties }
             propertyService.insertMany(hdt.hdtId, properties)
-            // Respond
+
             call.respond(HttpStatusCode.Created, hdtDoc)
         }.describe {
             operationId = "hdts/post"
@@ -102,7 +101,7 @@ fun Route.humanDigitalTwinRoutes(
                 val id = call.parameters["id"] ?: throw IllegalArgumentException("No ID found")
                 val hdt = call.receive<HumanDigitalTwin>()
                 hdtService.update(id, hdt)?.let {
-                    call.respond(HttpStatusCode.OK)
+                    call.respond(HttpStatusCode.OK, it)
                 } ?: call.respond(HttpStatusCode.NotFound)
             }.describe {
                 operationId = "hdts/{id}/update"
@@ -119,6 +118,7 @@ fun Route.humanDigitalTwinRoutes(
                 responses {
                     HttpStatusCode.OK {
                         description = "Human Digital Twin updated"
+                        schema = jsonSchema<HumanDigitalTwinDocument>()
                     }
                     HttpStatusCode.NotFound {
                         description = "Human Digital Twin to update not found"
@@ -145,6 +145,9 @@ fun Route.humanDigitalTwinRoutes(
                     }
                 }
             }
+
+            hdtModelsRoute(modelService)
+            hdtEventsRoute(propertyService)
         }
 
         route("/batch") {

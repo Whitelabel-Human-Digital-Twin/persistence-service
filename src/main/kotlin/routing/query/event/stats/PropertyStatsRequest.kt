@@ -1,4 +1,4 @@
-package io.github.whdt.request
+package io.github.whdt.routing.query.event.stats
 
 import io.github.whdt.core.hdt.HdtId
 import io.github.whdt.core.hdt.model.ModelId

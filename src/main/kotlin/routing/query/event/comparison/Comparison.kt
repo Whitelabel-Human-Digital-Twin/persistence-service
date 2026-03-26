@@ -1,4 +1,4 @@
-package io.github.whdt.db.property.query
+package io.github.whdt.routing.query.event.comparison
 
 import io.github.whdt.core.hdt.model.property.PropertyName
 import io.github.whdt.core.hdt.model.property.PropertyValue

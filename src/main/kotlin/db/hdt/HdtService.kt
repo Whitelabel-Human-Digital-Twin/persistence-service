@@ -60,9 +60,10 @@ class HdtService(private val database: MongoDatabase) {
         collection.find(eq("_id", ObjectId(id))).first()?.let(HumanDigitalTwinDocument::fromDocument)
     }
 
-    suspend fun update(id: String, hdt: HumanDigitalTwin): Document? = withContext(Dispatchers.IO) {
+    suspend fun update(id: String, hdt: HumanDigitalTwin): HumanDigitalTwinDocument? = withContext(Dispatchers.IO) {
         val hdtDocument = HumanDigitalTwinDocument.fromHumanDigitalTwin(hdt)
-        collection.findOneAndReplace(eq("_id", ObjectId(id)), hdtDocument.toDocument())
+        val res = collection.findOneAndReplace(eq("_id", ObjectId(id)), hdtDocument.toDocument())
+        res?.let { HumanDigitalTwinDocument.fromDocument(it) }
     }
 
     suspend fun delete(id: String): Document? = withContext(Dispatchers.IO) {
