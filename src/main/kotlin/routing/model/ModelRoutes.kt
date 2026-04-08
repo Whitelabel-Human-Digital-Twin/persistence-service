@@ -3,6 +3,7 @@ package io.github.whdt.routing.model
 import io.github.whdt.core.hdt.model.Model
 import io.github.whdt.db.model.ModelDocument
 import io.github.whdt.db.model.ModelService
+import io.github.whdt.db.util.getOrRespond
 import io.ktor.http.HttpStatusCode
 import io.ktor.openapi.jsonSchema
 import io.ktor.server.request.receive
@@ -89,12 +90,11 @@ fun Route.modelsRoutes(
         route("/batch") {
             post {
                 val models = call.receive<List<Model>>()
-                val res = modelService.insertMany(models)
-                if (res) {
-                    call.respond(HttpStatusCode.Created)
-                } else {
-                    call.respond(HttpStatusCode.InternalServerError)
-                }
+                modelService.insertMany(models).getOrRespond(call) {
+                    call.respond(HttpStatusCode.InternalServerError, it.message)
+                } ?: return@post
+
+                call.respond(HttpStatusCode.Created)
             }.describe {
                 operationId = "models/batch/insert"
                 summary = "Batch insert [Model]"
@@ -117,12 +117,11 @@ fun Route.modelsRoutes(
 
             put {
                 val models = call.receive<List<Model>>()
-                val res = modelService.upsertMany(models)
-                if (res) {
-                    call.respond(HttpStatusCode.OK)
-                } else {
-                    call.respond(HttpStatusCode.InternalServerError)
-                }
+                modelService.upsertMany(models).getOrRespond(call) {
+                    call.respond(HttpStatusCode.InternalServerError, it.message)
+                } ?: return@put
+
+                call.respond(HttpStatusCode.OK)
             }.describe {
                 operationId = "models/batch/upsert"
                 summary = "Batch upsert [Model]"
