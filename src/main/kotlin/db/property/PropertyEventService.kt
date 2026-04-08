@@ -18,6 +18,8 @@ import io.github.whdt.core.hdt.model.property.Property
 import io.github.whdt.core.hdt.model.property.PropertyId
 import io.github.whdt.core.hdt.model.property.PropertyName
 import io.github.whdt.core.hdt.model.property.PropertyValue
+import io.github.whdt.db.util.OperationResult
+import io.github.whdt.db.util.runCatchingResult
 import io.github.whdt.routing.query.event.comparison.ComparisonOperator
 import io.github.whdt.routing.query.event.comparison.Comparison
 import io.github.whdt.routing.query.event.comparison.PropertyComparison
@@ -45,12 +47,14 @@ class PropertyEventService(val db: MongoDatabase) {
 
     /** CRUD OPERATIONS **/
 
-    suspend fun insertMany(hdtId: HdtId, properties: List<Property>): Boolean = withContext(Dispatchers.IO) {
+    suspend fun insertMany(hdtId: HdtId, properties: List<Property>): OperationResult<Int> = withContext(Dispatchers.IO) {
         val docs = properties
             .map { PropertyEventDocument.fromWhdtProperty(hdtId, it) }
             .map(PropertyEventDocument::toDocument)
-        val res = collection.insertMany(docs)
-        res.wasAcknowledged()
+        runCatchingResult {
+            val res = collection.insertMany(docs)
+            res.insertedIds.size
+        }
     }
 
     /** AGGREGATE OPERATIONS **/

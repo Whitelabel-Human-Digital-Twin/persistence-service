@@ -1,12 +1,13 @@
 package io.github.whdt.routing.hdt
 
-import io.github.whdt.core.hdt.HdtId
 import io.github.whdt.core.hdt.HumanDigitalTwin
-import io.github.whdt.core.hdt.model.property.Property
 import io.github.whdt.db.hdt.HdtService
 import io.github.whdt.db.hdt.HumanDigitalTwinDocument
 import io.github.whdt.db.model.ModelService
 import io.github.whdt.db.property.PropertyEventService
+import io.github.whdt.db.util.getOrRespond
+import io.github.whdt.db.util.sequenceResults
+import io.github.whdt.db.util.sum
 import io.ktor.http.*
 import io.ktor.openapi.*
 import io.ktor.server.request.*
@@ -14,13 +15,6 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.routing.openapi.*
 import io.ktor.utils.io.*
-
-suspend fun mapPropertiesFromHdts(hdts: List<HumanDigitalTwin>, mapping: suspend (HdtId, List<Property>) -> Boolean): Boolean {
-    return hdts.map {
-        val properties = it.models.flatMap { m -> m.properties }
-        mapping(it.hdtId, properties)
-    }.foldRight(true){ a, b -> a&&b }
-}
 
 @OptIn(ExperimentalKtorApi::class)
 fun Route.humanDigitalTwinRoutes(
@@ -153,17 +147,21 @@ fun Route.humanDigitalTwinRoutes(
         route("/batch") {
             post {
                 val hdts = call.receive<List<HumanDigitalTwin>>()
-                val resHdt = hdtService.insertMany(hdts)
-                if (!resHdt) return@post call.respond(HttpStatusCode.InternalServerError)
+                hdtService.insertMany(hdts).getOrRespond(call) {
+                    call.respond(HttpStatusCode.InternalServerError, it.message)
+                } ?: return@post
 
                 val models = hdts.flatMap { it.models }
-                val resModel = modelService.insertMany(models)
-                if (!resModel) return@post call.respond(HttpStatusCode.InternalServerError)
+                modelService.insertMany(models).getOrRespond(call) {
+                    call.respond(HttpStatusCode.InternalServerError, it.message)
+                } ?: return@post
 
-                val resProperty = mapPropertiesFromHdts(hdts) { id, p ->
-                    propertyService.insertMany(id, p)
-                }
-                if (!resProperty) return@post call.respond(HttpStatusCode.InternalServerError)
+                hdts.sequenceResults { hdt ->
+                        val props = hdt.models.flatMap { it.properties }
+                        propertyService.insertMany(hdt.hdtId, props)
+                    }.sum().getOrRespond(call) {
+                        call.respond(HttpStatusCode.InternalServerError, it.message)
+                    } ?: return@post
 
                 call.respond(HttpStatusCode.OK)
             }.describe {
@@ -187,17 +185,21 @@ fun Route.humanDigitalTwinRoutes(
 
             put {
                 val hdts = call.receive<List<HumanDigitalTwin>>()
-                val resHdt = hdtService.upsertMany(hdts)
-                if (!resHdt) return@put call.respond(HttpStatusCode.InternalServerError)
+                hdtService.upsertMany(hdts).getOrRespond(call) {
+                    call.respond(HttpStatusCode.InternalServerError, it.message)
+                } ?: return@put
 
                 val models = hdts.flatMap { it.models }
-                val resModel = modelService.upsertMany(models)
-                if (!resModel) return@put call.respond(HttpStatusCode.InternalServerError)
+                modelService.upsertMany(models).getOrRespond(call) {
+                    call.respond(HttpStatusCode.InternalServerError, it.message)
+                } ?: return@put
 
-                val resProperty = mapPropertiesFromHdts(hdts) { id, p ->
-                    propertyService.insertMany(id, p)
-                }
-                if (!resProperty) return@put call.respond(HttpStatusCode.InternalServerError)
+                hdts.sequenceResults { hdt ->
+                    val props = hdt.models.flatMap { it.properties }
+                    propertyService.insertMany(hdt.hdtId, props)
+                }.sum().getOrRespond(call) {
+                    call.respond(HttpStatusCode.InternalServerError, it.message)
+                } ?: return@put
 
                 call.respond(HttpStatusCode.OK)
             }.describe {

@@ -10,6 +10,8 @@ import com.mongodb.client.model.ReplaceOptions
 import io.github.whdt.core.hdt.HdtId
 import io.github.whdt.core.hdt.model.Model
 import io.github.whdt.core.hdt.model.ModelName
+import io.github.whdt.db.util.OperationResult
+import io.github.whdt.db.util.runCatchingResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.bson.Document
@@ -31,10 +33,12 @@ class ModelService(private val database: MongoDatabase) {
         ModelDocument.fromDocument(doc)
     }
 
-    suspend fun insertMany(models: List<Model>): Boolean = withContext(Dispatchers.IO) {
+    suspend fun insertMany(models: List<Model>): OperationResult<Int> = withContext(Dispatchers.IO) {
         val docs = models.map { ModelDocument.fromWhdtModel(it) }.map { it.toDocument() }
-        val res = collection.insertMany(docs)
-        res.wasAcknowledged()
+        runCatchingResult {
+            val res = collection.insertMany(docs)
+            res.insertedIds.size
+        }
     }
 
     suspend fun upsert(model: Model): Boolean = withContext(Dispatchers.IO) {
@@ -46,7 +50,7 @@ class ModelService(private val database: MongoDatabase) {
         res.wasAcknowledged()
     }
 
-    suspend fun upsertMany(models: List<Model>): Boolean = withContext(Dispatchers.IO) {
+    suspend fun upsertMany(models: List<Model>): OperationResult<Map<String, Int>> = withContext(Dispatchers.IO) {
         val operations = models.map { model ->
             val doc = ModelDocument.fromWhdtModel(model).toDocument()
             ReplaceOneModel(
@@ -56,8 +60,13 @@ class ModelService(private val database: MongoDatabase) {
             )
         }
 
-        val res = collection.bulkWrite(operations)
-        res.wasAcknowledged()
+        runCatchingResult {
+            val res = collection.bulkWrite(operations)
+            mapOf(
+                "inserted" to res.inserts.size,
+                "upserted" to res.upserts.size,
+            )
+        }
     }
 
     suspend fun read(id: String): ModelDocument? = withContext(Dispatchers.IO) {
