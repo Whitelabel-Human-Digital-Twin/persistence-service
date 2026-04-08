@@ -67,15 +67,18 @@ data class PropertyEventMetadata(
 data class PropertyEventDocument(
     val metaField: PropertyEventMetadata,
     val timeField: Instant,
-    val value: PropertyValue
+    val value: PropertyValue,
+    val metadata: Map<String, String>
 ) {
     fun toDocument(): Document {
         val mF = metaField.toDocument()
         val tF = Date.from(timeField.toJavaInstant())
+        val metadataDoc = Document(metadata)
         val doc = Document()
             .append("metaField", mF)
             .append("timeField", tF)
             .append("value", value.toBsonValue())
+            .append("metadata", metadataDoc)
         return doc
     }
 
@@ -85,10 +88,15 @@ data class PropertyEventDocument(
             val metaField = PropertyEventMetadata.fromDocument(meta) ?: return null
             val value = doc["value"]?.pv() ?: return null
             val time = doc.getDate("timeField")?.toInstant()?.toKotlinInstant() ?: return null
+            val metadataDoc = doc.get("metadata", Document::class.java)
+            val metadata = metadataDoc?.entries
+                ?.associate { (k, v) -> k to v.toString() }
+                ?: emptyMap()
             return PropertyEventDocument(
                 metaField,
                 time,
-                value
+                value,
+                metadata
             )
         }
 
@@ -105,7 +113,8 @@ data class PropertyEventDocument(
             return PropertyEventDocument(
                 metaField = meta,
                 timeField = property.timestamp,
-                value = property.value
+                value = property.value,
+                metadata = property.metadata
             )
         }
     }
