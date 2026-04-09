@@ -2,16 +2,13 @@ package io.github.whdt.routing.query.event.values
 
 import io.github.whdt.db.property.PropertyEventDocument
 import io.github.whdt.db.property.PropertyEventService
-import io.github.whdt.routing.query.event.stats.PropertyStatsPerHdt
-import io.ktor.http.HttpStatusCode
-import io.ktor.openapi.jsonSchema
-import io.ktor.server.request.receive
-import io.ktor.server.response.respond
-import io.ktor.server.routing.Route
-import io.ktor.server.routing.openapi.describe
-import io.ktor.server.routing.post
-import io.ktor.server.routing.route
-import io.ktor.utils.io.ExperimentalKtorApi
+import io.ktor.http.*
+import io.ktor.openapi.*
+import io.ktor.server.request.*
+import io.ktor.server.response.*
+import io.ktor.server.routing.*
+import io.ktor.server.routing.openapi.*
+import io.ktor.utils.io.*
 import kotlin.time.toJavaInstant
 
 @OptIn(ExperimentalKtorApi::class)
@@ -20,7 +17,8 @@ fun Route.propertyValuesRoutes(
 ) {
     route("/query/event/values") {
         post("/valuesById") {
-            val req = call.receive<PropertyValuesRequest>()
+            val reqs = call.receive<List<PropertyValuesRequest>>()
+            val req = reqs.firstOrNull() ?: return@post call.respond(HttpStatusCode.BadRequest)
             val values = propertyEventService.propertiesById(
                 propertyId = req.propertyId!!,
                 req.from!!.toJavaInstant(),
@@ -39,11 +37,15 @@ fun Route.propertyValuesRoutes(
                 HttpStatusCode.OK {
                     schema = jsonSchema<List<PropertyEventDocument>>()
                 }
+                HttpStatusCode.BadRequest {
+                    description = "If an empty list is sent."
+                }
             }
         }
 
         post("/valuesByName") {
-            val req = call.receive<PropertyValuesRequest>()
+            val reqs = call.receive<List<PropertyValuesRequest>>()
+            val req = reqs.firstOrNull() ?: return@post call.respond(HttpStatusCode.BadRequest)
             val values = propertyEventService.propertiesByName(
                 hdtId = req.hdtId!!,
                 propertyName = req.propertyName!!,
@@ -63,11 +65,16 @@ fun Route.propertyValuesRoutes(
                 HttpStatusCode.OK {
                     schema = jsonSchema<List<PropertyEventDocument>>()
                 }
+                HttpStatusCode.BadRequest {
+                    description = "If an empty list is sent."
+                }
             }
         }
 
         post("/history") {
-            val req = call.receive<PropertyValuesRequest>()
+            val reqs = call.receive<List<PropertyValuesRequest>>()
+            val req = reqs.firstOrNull()
+                ?: return@post call.respond(HttpStatusCode.BadRequest)
             val values = propertyEventService.propertyHistory(
                 hdtId = req.hdtId!!,
                 propertyName = req.propertyName!!,
@@ -84,6 +91,9 @@ fun Route.propertyValuesRoutes(
             responses {
                 HttpStatusCode.OK {
                     schema = jsonSchema<List<PropertyEventDocument>>()
+                }
+                HttpStatusCode.BadRequest {
+                    description = "If an empty list is sent."
                 }
             }
         }

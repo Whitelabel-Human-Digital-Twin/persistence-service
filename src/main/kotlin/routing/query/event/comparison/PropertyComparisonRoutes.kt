@@ -1,6 +1,9 @@
 package io.github.whdt.routing.query.event.comparison
 
 import io.github.whdt.db.property.PropertyEventService
+import io.github.whdt.routing.query.event.comparison.dto.PropertiesByComparisonsRequestDto
+import io.github.whdt.routing.query.event.comparison.dto.inferPropertyType
+import io.github.whdt.routing.query.event.comparison.dto.toDomain
 import io.ktor.http.HttpStatusCode
 import io.ktor.openapi.jsonSchema
 import io.ktor.server.request.receive
@@ -16,9 +19,14 @@ fun Route.propertyComparisonRoutes(
 ) {
     route("/query/event/comparison") {
         post {
-            val req = call.receive<PropertiesByComparisonsAggregateRequest>()
+            val req = call.receive<PropertiesByComparisonsRequestDto>()
+            val domainComparisons = req.comparisons.map { dto ->
+                val inferredType = inferPropertyType(dto.value)
+
+                dto.toDomain(inferredType)
+            }
             val stats = propertyEventService.propertiesByComparisonsAggregate(
-                req.comparisons,
+                domainComparisons,
                 req.modelNames,
                 req.from?.toJavaInstant(),
                 req.to?.toJavaInstant()
@@ -29,7 +37,7 @@ fun Route.propertyComparisonRoutes(
             summary = "Query Events by comparisons"
 
             requestBody {
-                schema = jsonSchema<PropertiesByComparisonsAggregateRequest>()
+                schema = jsonSchema<PropertiesByComparisonsRequestDto>()
             }
 
             responses {
