@@ -1,7 +1,7 @@
 package io.github.whdt.routing.query.event.values
 
-import io.github.whdt.db.property.PropertyEventDocument
-import io.github.whdt.db.property.PropertyEventService
+import io.github.whdt.db.property.PropertyObservationDocument
+import io.github.whdt.db.property.PropertyObservationService
 import io.ktor.http.*
 import io.ktor.openapi.*
 import io.ktor.server.request.*
@@ -13,13 +13,13 @@ import kotlin.time.toJavaInstant
 
 @OptIn(ExperimentalKtorApi::class)
 fun Route.propertyValuesRoutes(
-    propertyEventService: PropertyEventService
+    propertyEventService: PropertyObservationService
 ) {
     route("/query/event/values") {
         post("/valuesById") {
             val reqs = call.receive<List<PropertyValuesRequest>>()
             val req = reqs.firstOrNull() ?: return@post call.respond(HttpStatusCode.BadRequest)
-            val values = propertyEventService.propertiesById(
+            val values = propertyEventService.observationsById(
                 propertyId = req.propertyId!!,
                 req.from!!.toJavaInstant(),
                 req.to!!.toJavaInstant()
@@ -27,7 +27,7 @@ fun Route.propertyValuesRoutes(
             call.respond(HttpStatusCode.OK, values)
         }.describe {
             operationId = "query/event/values/byId"
-            summary = "Query Events by Id"
+            summary = "Query Observations by Id"
 
             requestBody {
                 schema = jsonSchema<List<PropertyValuesRequest>>()
@@ -35,7 +35,7 @@ fun Route.propertyValuesRoutes(
 
             responses {
                 HttpStatusCode.OK {
-                    schema = jsonSchema<List<PropertyEventDocument>>()
+                    schema = jsonSchema<List<PropertyObservationDocument>>()
                 }
                 HttpStatusCode.BadRequest {
                     description = "If an empty list is sent."
@@ -46,7 +46,7 @@ fun Route.propertyValuesRoutes(
         post("/valuesByName") {
             val reqs = call.receive<List<PropertyValuesRequest>>()
             val req = reqs.firstOrNull() ?: return@post call.respond(HttpStatusCode.BadRequest)
-            val values = propertyEventService.propertiesByName(
+            val values = propertyEventService.observationsByName(
                 hdtId = req.hdtId!!,
                 propertyName = req.propertyName!!,
                 req.from!!.toJavaInstant(),
@@ -55,7 +55,7 @@ fun Route.propertyValuesRoutes(
             call.respond(HttpStatusCode.OK, values)
         }.describe {
             operationId = "query/event/values/byName"
-            summary = "Query Events by Name"
+            summary = "Query Observations by Name"
 
             requestBody {
                 schema = jsonSchema<List<PropertyValuesRequest>>()
@@ -63,7 +63,7 @@ fun Route.propertyValuesRoutes(
 
             responses {
                 HttpStatusCode.OK {
-                    schema = jsonSchema<List<PropertyEventDocument>>()
+                    schema = jsonSchema<List<PropertyObservationDocument>>()
                 }
                 HttpStatusCode.BadRequest {
                     description = "If an empty list is sent."
@@ -75,14 +75,14 @@ fun Route.propertyValuesRoutes(
             val reqs = call.receive<List<PropertyValuesRequest>>()
             val req = reqs.firstOrNull()
                 ?: return@post call.respond(HttpStatusCode.BadRequest)
-            val values = propertyEventService.propertyHistory(
+            val values = propertyEventService.observationHistory(
                 hdtId = req.hdtId!!,
                 propertyName = req.propertyName!!,
             )
             call.respond(HttpStatusCode.OK, values)
         }.describe {
             operationId = "query/event/values/history"
-            summary = "Query Event history for a certain HDT"
+            summary = "Query Observation history for a certain HDT"
 
             requestBody {
                 schema = jsonSchema<List<PropertyValuesRequest>>()
@@ -90,7 +90,7 @@ fun Route.propertyValuesRoutes(
 
             responses {
                 HttpStatusCode.OK {
-                    schema = jsonSchema<List<PropertyEventDocument>>()
+                    schema = jsonSchema<List<PropertyObservationDocument>>()
                 }
                 HttpStatusCode.BadRequest {
                     description = "If an empty list is sent."

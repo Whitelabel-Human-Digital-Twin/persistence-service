@@ -1,6 +1,8 @@
 package io.github.whdt.db.util
 
+import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.*
+import io.ktor.server.response.respond
 
 /**
  * Represents the result of an operation that can either succeed with a value of type [T]
@@ -104,6 +106,22 @@ suspend fun <A, B> Iterable<A>.sequenceResults(
     }
 
     return Ok(results)
+}
+
+/**
+ * Handles an [OperationResult] by invoking [onSuccess] on the happy path, or responding with
+ * a 500 Internal Server Error on failure.
+ */
+suspend inline fun <T> OperationResult<T>.getOrRespond(
+    call: ApplicationCall,
+    onSuccess: suspend (T) -> Unit
+) {
+    when (this) {
+        is Ok -> onSuccess(result)
+        is Err -> {
+            call.respond(io.ktor.http.HttpStatusCode.InternalServerError, message)
+        }
+    }
 }
 
 /**

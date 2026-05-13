@@ -4,10 +4,11 @@ import io.github.whdt.core.hdt.HumanDigitalTwin
 import io.github.whdt.db.hdt.HdtService
 import io.github.whdt.db.hdt.HumanDigitalTwinDocument
 import io.github.whdt.db.model.ModelService
-import io.github.whdt.db.property.PropertyEventService
+import io.github.whdt.db.assembler.AssemblerService
+import io.github.whdt.db.property.PropertyObservationService
+import io.github.whdt.db.property.PropertyService
 import io.github.whdt.db.util.getOrRespond
 import io.github.whdt.db.util.sequenceResults
-import io.github.whdt.db.util.sum
 import io.ktor.http.*
 import io.ktor.openapi.*
 import io.ktor.server.request.*
@@ -20,7 +21,9 @@ import io.ktor.utils.io.*
 fun Route.humanDigitalTwinRoutes(
     hdtService: HdtService,
     modelService: ModelService,
-    propertyService: PropertyEventService
+    propertyService: PropertyObservationService,
+    propertySpecService: PropertyService,
+    assemblerService: AssemblerService,
 ) {
     route("hdts") {
         get {
@@ -46,7 +49,9 @@ fun Route.humanDigitalTwinRoutes(
             modelService.insertMany(hdt.models)
 
             val properties = hdt.models.flatMap { it.properties }
-            propertyService.insertMany(hdt.hdtId, properties)
+            propertySpecService.batchUpsert(hdt.hdtId, properties).getOrRespond(call) {
+                call.respond(HttpStatusCode.InternalServerError, it.message)
+            } ?: return@post
 
             call.respond(HttpStatusCode.Created, hdtDoc)
         }.describe {
@@ -142,6 +147,7 @@ fun Route.humanDigitalTwinRoutes(
 
             hdtModelsRoute(modelService)
             hdtEventsRoute(propertyService)
+            hdtAssemblerRoutes(assemblerService)
         }
 
         route("/batch") {
@@ -157,11 +163,11 @@ fun Route.humanDigitalTwinRoutes(
                 } ?: return@post
 
                 hdts.sequenceResults { hdt ->
-                        val props = hdt.models.flatMap { it.properties }
-                        propertyService.insertMany(hdt.hdtId, props)
-                    }.sum().getOrRespond(call) {
-                        call.respond(HttpStatusCode.InternalServerError, it.message)
-                    } ?: return@post
+                    val props = hdt.models.flatMap { it.properties }
+                    propertySpecService.batchUpsert(hdt.hdtId, props)
+                }.getOrRespond(call) {
+                    call.respond(HttpStatusCode.InternalServerError, it.message)
+                } ?: return@post
 
                 call.respond(HttpStatusCode.OK)
             }.describe {
@@ -196,8 +202,8 @@ fun Route.humanDigitalTwinRoutes(
 
                 hdts.sequenceResults { hdt ->
                     val props = hdt.models.flatMap { it.properties }
-                    propertyService.insertMany(hdt.hdtId, props)
-                }.sum().getOrRespond(call) {
+                    propertySpecService.batchUpsert(hdt.hdtId, props)
+                }.getOrRespond(call) {
                     call.respond(HttpStatusCode.InternalServerError, it.message)
                 } ?: return@put
 

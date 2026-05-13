@@ -1,6 +1,6 @@
 package io.github.whdt.routing.query.event.comparison
 
-import io.github.whdt.db.property.PropertyEventService
+import io.github.whdt.db.property.PropertyObservationService
 import io.github.whdt.routing.query.event.comparison.dto.PropertiesByComparisonsRequestDto
 import io.github.whdt.routing.query.event.comparison.dto.inferPropertyType
 import io.github.whdt.routing.query.event.comparison.dto.toDomain
@@ -15,7 +15,7 @@ import kotlin.time.toJavaInstant
 
 @OptIn(ExperimentalKtorApi::class)
 fun Route.propertyComparisonRoutes(
-    propertyEventService: PropertyEventService
+    propertyEventService: PropertyObservationService
 ) {
     route("/query/event/comparison") {
         post {
@@ -25,7 +25,7 @@ fun Route.propertyComparisonRoutes(
 
                 dto.toDomain(inferredType)
             }
-            val stats = propertyEventService.propertiesByComparisonsAggregate(
+            val stats = propertyEventService.observationsByComparisonsAggregate(
                 domainComparisons,
                 req.modelNames,
                 req.from?.toJavaInstant(),

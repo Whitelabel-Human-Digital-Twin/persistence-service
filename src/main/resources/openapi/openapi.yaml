@@ -1,7 +1,7 @@
 openapi: 3.1.1
 info:
   title: whdt-persistence-api
-  version: v0.1.0
+  version: v0.2.0
 paths:
   /hdts:
     post:
@@ -121,8 +121,8 @@ paths:
   /hdts/{id}/events:
     get:
       operationId: hdts/{id}/events
-      summary: Get HDT's [Events]
-      description: Get all Events of the specified HDT
+      summary: Get HDT's [Observations]
+      description: Get all Observations of the specified HDT
       parameters:
       - name: id
         in: path
@@ -131,15 +131,61 @@ paths:
           type: string
       responses:
         '200':
-          description: Human Digital Twin Events
+          description: Human Digital Twin Observations
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/PropertyEventDocument'
+                  $ref: '#/components/schemas/PropertyObservationDocument'
         '404':
-          description: Human Digital Twin or Events not found
+          description: Human Digital Twin or Observations not found
+  /hdts/{id}/spec:
+    get:
+      operationId: hdts/{id}/spec
+      summary: Get full HDT spec
+      description: Assembles a full HDT spec from hdt, models, and properties collections
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Full HDT spec
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HdtSpecResponse'
+        '400':
+          description: Missing HDT id
+        '500':
+          description: HDT or associated data not found
+  /hdts/{id}/snapshot:
+    get:
+      operationId: hdts/{id}/snapshot
+      summary: Get HDT snapshot
+      description: Returns current value per property — latest observation or initialValue fallback
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Property snapshot
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PropertySnapshotEntry'
+        '400':
+          description: Missing HDT id
+        '500':
+          description: HDT or property specs not found
   /hdts/batch:
     put:
       operationId: hdts/batch/update
@@ -260,27 +306,83 @@ paths:
           description: Created Successfully
         '500':
           description: Failed to create Models
+  /properties:
+    get:
+      operationId: properties/get
+      summary: List Property specs
+      description: Return property specs filtered by hdtId and optional modelId
+      parameters:
+      - name: hdtId
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: modelId
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Property specs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PropertyDocument'
+        '400':
+          description: Missing hdtId query parameter
   /properties/batch:
     post:
-      operationId: properties/insert
-      summary: properties/insert
-      description: Batch insert HDT's [Property] as Events
+      operationId: properties/batch/upsert
+      summary: Batch upsert Property specs
+      description: Insert or update a list of Property specs for a given HDT
+      parameters:
+      - name: hdtId
+        in: query
+        required: true
+        schema:
+          type: string
       requestBody:
-        description: A Human Digital Twin
+        description: List of Property specs
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/human-digital-twin'
+              type: array
+              items:
+                $ref: '#/components/schemas/property'
         required: true
       responses:
         '201':
-          description: HDT's [Property] created as Events
+          description: Property specs upserted successfully
+        '400':
+          description: Missing hdtId query parameter
         '500':
-          description: Error creating Events
+          description: Failed to upsert property specs
+  /observations/batch:
+    post:
+      operationId: observations/batch/insert
+      summary: Batch insert [PropertyObservation]
+      description: Batch insert PropertyObservation
+      requestBody:
+        description: A list of PropertyObservation
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/PropertyObservation'
+        required: true
+      responses:
+        '201':
+          description: Observations created
+        '500':
+          description: Error creating observations
   /query/event/values/valuesById:
     post:
       operationId: query/event/values/byId
-      summary: Query Events by Id
+      summary: Query Observations by Id
       requestBody:
         content:
           application/json:
@@ -297,13 +399,13 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/PropertyEventDocument'
+                  $ref: '#/components/schemas/PropertyObservationDocument'
         '400':
           description: POST /query/event/values/valuesById response 400 if empty request.
   /query/event/values/valuesByName:
     post:
       operationId: query/event/values/byName
-      summary: Query Events by Name
+      summary: Query Observations by Name
       requestBody:
         content:
           application/json:
@@ -320,13 +422,13 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/PropertyEventDocument'
+                  $ref: '#/components/schemas/PropertyObservationDocument'
         '400':
           description: POST /query/event/values/valuesByName response 400 if empty request.
   /query/event/values/history:
     post:
       operationId: query/event/values/history
-      summary: Query Event history for a certain HDT
+      summary: Query Observation history for a certain HDT
       requestBody:
         content:
           application/json:
@@ -343,7 +445,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/PropertyEventDocument'
+                  $ref: '#/components/schemas/PropertyObservationDocument'
         '400':
           description: POST /query/event/values/history response 400 if empty request.
   /query/event/stats:
@@ -368,7 +470,7 @@ paths:
   /query/event/comparison:
     post:
       operationId: query/event/comparison
-      summary: Query Events by comparisons
+      summary: Query Observations by comparisons
       requestBody:
         content:
           application/json:
@@ -663,6 +765,46 @@ components:
         lastUpdated:
           type: string
           format: date-time
+    PropertyDocument:
+      type: object
+      title: io.github.whdt.db.property.PropertyDocument
+      required:
+      - hdtId
+      - modelId
+      - propertyId
+      - propertyName
+      - description
+      - declaredType
+      properties:
+        hdtId:
+          type: string
+        modelId:
+          type: string
+        propertyId:
+          type: string
+        propertyName:
+          type: string
+        description:
+          type: string
+        declaredType:
+          type: string
+          enum:
+          - INT
+          - LONG
+          - FLOAT
+          - DOUBLE
+          - STRING
+          - BOOLEAN
+        initialValue:
+          $ref: '#/components/schemas/PropertyValue'
+          nullable: true
+        metadata:
+          type: object
+          additionalProperties:
+            type: string
+        lastUpdated:
+          type: string
+          format: date-time
     PropertyEventMetadata:
       type: object
       title: io.github.whdt.db.property.PropertyEventMetadata
@@ -745,9 +887,9 @@ components:
       - $ref: '#/components/schemas/int-value'
       - $ref: '#/components/schemas/long-value'
       - $ref: '#/components/schemas/string-value'
-    PropertyEventDocument:
+    PropertyObservationDocument:
       type: object
-      title: io.github.whdt.db.property.PropertyEventDocument
+      title: io.github.whdt.db.property.PropertyObservationDocument
       required:
       - metaField
       - timeField
@@ -760,6 +902,34 @@ components:
           format: date-time
         value:
           $ref: '#/components/schemas/PropertyValue'
+    PropertyObservation:
+      type: object
+      title: io.github.whdt.core.hdt.model.property.PropertyObservation
+      required:
+      - hdtId
+      - modelId
+      - propertyId
+      - propertyName
+      - value
+      - timestamp
+      properties:
+        hdtId:
+          type: string
+        modelId:
+          type: string
+        propertyId:
+          type: string
+        propertyName:
+          type: string
+        value:
+          $ref: '#/components/schemas/PropertyValue'
+        timestamp:
+          type: string
+          format: date-time
+        metadata:
+          type: object
+          additionalProperties:
+            type: string
     property:
       type: object
       title: property
@@ -767,8 +937,7 @@ components:
       - modelId
       - name
       - description
-      - timestamp
-      - value
+      - declaredType
       properties:
         modelId:
           type: string
@@ -776,13 +945,117 @@ components:
           type: string
         description:
           type: string
+        declaredType:
+          type: string
+          enum:
+          - INT
+          - LONG
+          - FLOAT
+          - DOUBLE
+          - STRING
+          - BOOLEAN
+        initialValue:
+          $ref: '#/components/schemas/PropertyValue'
+          nullable: true
+        id:
+          type: string
+    PropertySpecEntry:
+      type: object
+      title: io.github.whdt.db.assembler.PropertySpecEntry
+      required:
+      - propertyId
+      - propertyName
+      - description
+      - declaredType
+      properties:
+        propertyId:
+          type: string
+        propertyName:
+          type: string
+        description:
+          type: string
+        declaredType:
+          type: string
+        initialValue:
+          $ref: '#/components/schemas/PropertyValue'
+          nullable: true
+        metadata:
+          type: object
+          additionalProperties:
+            type: string
+    ModelSpecEntry:
+      type: object
+      title: io.github.whdt.db.assembler.ModelSpecEntry
+      required:
+      - modelId
+      - modelName
+      - properties
+      properties:
+        modelId:
+          type: string
+        modelName:
+          type: string
+        properties:
+          type: array
+          items:
+            $ref: '#/components/schemas/PropertySpecEntry'
+    HdtSpecResponse:
+      type: object
+      title: io.github.whdt.db.assembler.HdtSpecResponse
+      required:
+      - hdtId
+      - physicalInterfaces
+      - digitalInterfaces
+      - storages
+      - models
+      - metadata
+      properties:
+        hdtId:
+          type: string
+        physicalInterfaces:
+          type: array
+          items:
+            $ref: '#/components/schemas/PhysicalInterface'
+        digitalInterfaces:
+          type: array
+          items:
+            $ref: '#/components/schemas/DigitalInterface'
+        storages:
+          type: array
+          items:
+            $ref: '#/components/schemas/Storage'
+        models:
+          type: array
+          items:
+            $ref: '#/components/schemas/ModelSpecEntry'
+        metadata:
+          type: object
+          additionalProperties:
+            type: string
+    PropertySnapshotEntry:
+      type: object
+      title: io.github.whdt.db.assembler.PropertySnapshotEntry
+      required:
+      - propertyId
+      - propertyName
+      - source
+      properties:
+        propertyId:
+          type: string
+        propertyName:
+          type: string
+        value:
+          $ref: '#/components/schemas/PropertyValue'
+          nullable: true
         timestamp:
           type: string
           format: date-time
-        value:
-          $ref: '#/components/schemas/PropertyValue'
-        id:
+          nullable: true
+        source:
           type: string
+          enum:
+          - observation
+          - initial_value
     PropertyValuesRequest:
       type: object
       title: io.github.whdt.routing.query.event.values.PropertyValuesRequest

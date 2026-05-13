@@ -3,9 +3,9 @@ package io.github.whdt.db.property
 import io.github.whdt.core.hdt.HdtId
 import io.github.whdt.core.hdt.model.ModelId
 import io.github.whdt.core.hdt.model.ModelName
-import io.github.whdt.core.hdt.model.property.Property
 import io.github.whdt.core.hdt.model.property.PropertyId
 import io.github.whdt.core.hdt.model.property.PropertyName
+import io.github.whdt.core.hdt.model.property.PropertyObservation
 import io.github.whdt.core.hdt.model.property.PropertyValue
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -14,6 +14,12 @@ import java.util.*
 import kotlin.time.Instant
 import kotlin.time.toJavaInstant
 import kotlin.time.toKotlinInstant
+
+// MIGRATION NOTE: The MongoDB `property_events` collection is a time-series collection.
+// To rename it in MongoDB 6.0+ (Atlas), run this before deploying this version:
+//   db.adminCommand({ renameCollection: "yourdb.property_events", to: "yourdb.observations" })
+// If zero-downtime is required, keep the old collection name active during the transition
+// and handle both names transiently until migration is confirmed complete.
 
 fun Any.pv(): PropertyValue? = when (this) {
     is Int -> PropertyValue.IntPropertyValue(this)
@@ -64,7 +70,7 @@ data class PropertyEventMetadata(
 }
 
 @Serializable
-data class PropertyEventDocument(
+data class PropertyObservationDocument(
     val metaField: PropertyEventMetadata,
     val timeField: Instant,
     val value: PropertyValue,
@@ -83,7 +89,7 @@ data class PropertyEventDocument(
     }
 
     companion object {
-        fun fromDocument(doc: Document): PropertyEventDocument? {
+        fun fromDocument(doc: Document): PropertyObservationDocument? {
             val meta = doc.get("metaField", Document::class.java)
             val metaField = PropertyEventMetadata.fromDocument(meta) ?: return null
             val value = doc["value"]?.pv() ?: return null
@@ -92,7 +98,7 @@ data class PropertyEventDocument(
             val metadata = metadataDoc?.entries
                 ?.associate { (k, v) -> k to v.toString() }
                 ?: emptyMap()
-            return PropertyEventDocument(
+            return PropertyObservationDocument(
                 metaField,
                 time,
                 value,
@@ -100,21 +106,21 @@ data class PropertyEventDocument(
             )
         }
 
-        fun fromWhdtProperty(hdtId: HdtId, property: Property): PropertyEventDocument {
-            val mnRaw = property.modelId.value.split(":").last()
+        fun fromObservation(observation: PropertyObservation): PropertyObservationDocument {
+            val mnRaw = observation.modelId.value.split(":").last()
             val modelName = ModelName(mnRaw)
             val meta = PropertyEventMetadata(
-                hdtId = hdtId,
-                modelId = property.modelId,
+                hdtId = observation.hdtId,
+                modelId = observation.modelId,
                 modelName = modelName,
-                propertyName = property.name,
-                propertyId = property.id
+                propertyName = observation.propertyName,
+                propertyId = observation.propertyId
             )
-            return PropertyEventDocument(
+            return PropertyObservationDocument(
                 metaField = meta,
-                timeField = property.timestamp,
-                value = property.value,
-                metadata = property.metadata
+                timeField = observation.timestamp,
+                value = observation.value,
+                metadata = observation.metadata
             )
         }
     }
