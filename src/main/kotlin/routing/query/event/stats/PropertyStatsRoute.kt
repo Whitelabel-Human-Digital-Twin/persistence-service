@@ -1,6 +1,6 @@
 package io.github.whdt.routing.query.event.stats
 
-import io.github.whdt.db.property.PropertyEventService
+import io.github.whdt.db.property.PropertyObservationService
 import io.ktor.http.HttpStatusCode
 import io.ktor.openapi.jsonSchema
 import io.ktor.server.request.receive
@@ -14,7 +14,7 @@ import kotlin.time.toJavaInstant
 
 @OptIn(ExperimentalKtorApi::class)
 fun Route.propertyStatsRoutes(
-    propertyEventService: PropertyEventService
+    propertyEventService: PropertyObservationService
 ) {
     route("query/event/stats") {
         post {

@@ -1,11 +1,14 @@
 package io.github.whdt
 
+import io.github.whdt.db.assembler.AssemblerService
 import io.github.whdt.db.hdt.HdtService
 import io.github.whdt.db.model.ModelService
-import io.github.whdt.db.property.PropertyEventService
+import io.github.whdt.db.property.PropertyObservationService
+import io.github.whdt.db.property.PropertyService
 import io.github.whdt.routing.hdt.humanDigitalTwinRoutes
 import io.github.whdt.routing.model.modelsRoutes
 import io.github.whdt.routing.property.propertyEventRoutes
+import io.github.whdt.routing.property.propertyRoutes
 import io.github.whdt.routing.query.queryRoutes
 import io.ktor.http.*
 import io.ktor.server.application.*
@@ -21,7 +24,9 @@ fun Application.configureRouting() {
     val mongoDatabase = connectToMongoDB()
     val hdtService = HdtService(mongoDatabase)
     val modelService = ModelService(mongoDatabase)
-    val propertyEventService = PropertyEventService(mongoDatabase)
+    val propertyObservationService = PropertyObservationService(mongoDatabase)
+    val propertyService = PropertyService(mongoDatabase)
+    val assemblerService = AssemblerService(hdtService, modelService, propertyService, propertyObservationService)
 
 
     routing {
@@ -44,9 +49,10 @@ fun Application.configureRouting() {
             )
         }
 
-        humanDigitalTwinRoutes(hdtService, modelService, propertyEventService)
+        humanDigitalTwinRoutes(hdtService, modelService, propertyObservationService, propertyService, assemblerService)
         modelsRoutes(modelService)
-        propertyEventRoutes(propertyEventService)
-        queryRoutes(propertyEventService)
+        propertyEventRoutes(propertyObservationService)
+        propertyRoutes(propertyService)
+        queryRoutes(propertyObservationService)
     }
 }

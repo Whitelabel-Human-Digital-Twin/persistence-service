@@ -14,9 +14,9 @@ import com.mongodb.client.model.Projections.include
 import io.github.whdt.core.hdt.HdtId
 import io.github.whdt.core.hdt.model.ModelId
 import io.github.whdt.core.hdt.model.ModelName
-import io.github.whdt.core.hdt.model.property.Property
 import io.github.whdt.core.hdt.model.property.PropertyId
 import io.github.whdt.core.hdt.model.property.PropertyName
+import io.github.whdt.core.hdt.model.property.PropertyObservation
 import io.github.whdt.core.hdt.model.property.PropertyValue
 import io.github.whdt.db.util.OperationResult
 import io.github.whdt.db.util.runCatchingResult
@@ -33,7 +33,7 @@ import java.time.Instant
 import java.util.*
 import kotlin.collections.mutableListOf
 
-class PropertyEventService(val db: MongoDatabase) {
+class PropertyObservationService(val db: MongoDatabase) {
     var collection: MongoCollection<Document>
 
     init {
@@ -41,16 +41,16 @@ class PropertyEventService(val db: MongoDatabase) {
             .metaField("metaField")
             .granularity(TimeSeriesGranularity.SECONDS)
         val ccOptions = CreateCollectionOptions().timeSeriesOptions(tsOptions)
-        db.createCollection("property_events", ccOptions)
-        collection = db.getCollection("property_events")
+        db.createCollection("observations", ccOptions)
+        collection = db.getCollection("observations")
     }
 
     /** CRUD OPERATIONS **/
 
-    suspend fun insertMany(hdtId: HdtId, properties: List<Property>): OperationResult<Int> = withContext(Dispatchers.IO) {
-        val docs = properties
-            .map { PropertyEventDocument.fromWhdtProperty(hdtId, it) }
-            .map(PropertyEventDocument::toDocument)
+    suspend fun insertMany(observations: List<PropertyObservation>): OperationResult<Int> = withContext(Dispatchers.IO) {
+        val docs = observations
+            .map { PropertyObservationDocument.fromObservation(it) }
+            .map(PropertyObservationDocument::toDocument)
         runCatchingResult {
             val res = collection.insertMany(docs)
             res.insertedIds.size
@@ -84,16 +84,16 @@ class PropertyEventService(val db: MongoDatabase) {
         }
     }
 
-    private suspend fun findPropertiesWithFilter(
+    private suspend fun findObservationsWithFilter(
         filter: Bson,
-    ): List<PropertyEventDocument> = withContext(Dispatchers.IO) {
+    ): List<PropertyObservationDocument> = withContext(Dispatchers.IO) {
         collection.find(filter)
             .projection(fields(include("metaField", "timeField", "value")))
             .toList()
-            .mapNotNull(PropertyEventDocument::fromDocument)
+            .mapNotNull(PropertyObservationDocument::fromDocument)
     }
 
-    private suspend fun findPropertiesWithBaseMatch(
+    private suspend fun findObservationsWithBaseMatch(
         hdtId: String? = null,
         modelId: String? = null,
         modelName: String? = null,
@@ -101,43 +101,65 @@ class PropertyEventService(val db: MongoDatabase) {
         propertyName: String? = null,
         from: Instant? = null,
         to: Instant? = null
-    ): List<PropertyEventDocument> = withContext(Dispatchers.IO) {
+    ): List<PropertyObservationDocument> = withContext(Dispatchers.IO) {
         val filters = baseMatch(hdtId, modelId, modelName, propertyId, propertyName, from, to)
-        findPropertiesWithFilter(filters)
+        findObservationsWithFilter(filters)
     }
 
-    suspend fun propertiesById(
+    suspend fun observationsById(
         propertyId: PropertyId,
         from: Instant,
         to: Instant
-    ): List<PropertyEventDocument> = withContext(Dispatchers.IO) {
-        findPropertiesWithBaseMatch(propertyId = propertyId.value, from = from, to = to)
+    ): List<PropertyObservationDocument> = withContext(Dispatchers.IO) {
+        findObservationsWithBaseMatch(propertyId = propertyId.value, from = from, to = to)
     }
 
-    suspend fun propertiesByName(
+    suspend fun observationsByName(
         hdtId: HdtId,
         propertyName: PropertyName,
         from: Instant,
         to: Instant,
-    ): List<PropertyEventDocument> = withContext(Dispatchers.IO) {
-        findPropertiesWithBaseMatch(hdtId = hdtId.id, propertyName = propertyName.value, from = from, to = to)
+    ): List<PropertyObservationDocument> = withContext(Dispatchers.IO) {
+        findObservationsWithBaseMatch(hdtId = hdtId.id, propertyName = propertyName.value, from = from, to = to)
     }
 
-    suspend fun propertiesByHdtId(
+    suspend fun observationsByHdtId(
         hdtId: HdtId,
-    ): List<PropertyEventDocument> = withContext(Dispatchers.IO) {
-        findPropertiesWithBaseMatch(hdtId = hdtId.id)
+    ): List<PropertyObservationDocument> = withContext(Dispatchers.IO) {
+        findObservationsWithBaseMatch(hdtId = hdtId.id)
     }
 
-    suspend fun propertyHistory(
+    suspend fun observationHistory(
         hdtId: HdtId,
         propertyName: PropertyName,
-    ): List<PropertyEventDocument> = withContext(Dispatchers.IO) {
+    ): List<PropertyObservationDocument> = withContext(Dispatchers.IO) {
         val filters = baseMatch(hdtId = hdtId.id, propertyName = propertyName.value)
         collection.find(filters)
             .projection(fields(include("metaField", "timeField", "value")))
             .toList()
-            .mapNotNull(PropertyEventDocument::fromDocument)
+            .mapNotNull(PropertyObservationDocument::fromDocument)
+    }
+
+    suspend fun latestPerProperty(
+        hdtId: HdtId
+    ): Map<PropertyId, PropertyObservationDocument> = withContext(Dispatchers.IO) {
+        val filter = baseMatch(hdtId = hdtId.id)
+        val pipeline = listOf(
+            match(filter),
+            sort(Sorts.descending("timeField")),
+            group(
+                "\$metaField.propertyId",
+                Accumulators.first("doc", "\$\$ROOT")
+            )
+        )
+        collection.aggregate(pipeline)
+            .mapNotNull { doc ->
+                val inner = doc.get("doc", Document::class.java) ?: return@mapNotNull null
+                val obs = PropertyObservationDocument.fromDocument(inner) ?: return@mapNotNull null
+                obs.metaField.propertyId to obs
+            }
+            .toList()
+            .toMap()
     }
 
     suspend fun propertyAggregateStats(
@@ -160,11 +182,11 @@ class PropertyEventService(val db: MongoDatabase) {
         val pipeline = listOf(
             match(and(filters)),
             group(
-                $$"$metaField.hdtId",
+                "\$metaField.hdtId",
                 Accumulators.sum("count", 1),
-                Accumulators.avg("avg", $$"$value"),
-                Accumulators.min("min", $$"$value"),
-                Accumulators.max("max", $$"$value")
+                Accumulators.avg("avg", "\$value"),
+                Accumulators.min("min", "\$value"),
+                Accumulators.max("max", "\$value")
             ),
             sort(Sorts.ascending("_id"))
         )
@@ -204,10 +226,10 @@ class PropertyEventService(val db: MongoDatabase) {
         }
     }
 
-    suspend fun propertiesByComparison(
+    suspend fun observationsByComparison(
         propertyName: PropertyName,
         comparisons: List<Comparison>,
-    ): List<PropertyEventDocument> = withContext(Dispatchers.IO) {
+    ): List<PropertyObservationDocument> = withContext(Dispatchers.IO) {
         val valueFilter = and(
             comparisons.map { buildValueFilter(it.comparison, it.value) }.toList()
         )
@@ -215,10 +237,10 @@ class PropertyEventService(val db: MongoDatabase) {
             valueFilter,
             baseMatch(propertyName = propertyName.value),
         )
-        findPropertiesWithFilter(filter)
+        findObservationsWithFilter(filter)
     }
 
-    suspend fun propertiesByComparisonsAggregate(
+    suspend fun observationsByComparisonsAggregate(
         propertyComparisons: List<PropertyComparison>,
         modelNames: List<ModelName>? = null,
         from: Instant? = null,
@@ -240,14 +262,14 @@ class PropertyEventService(val db: MongoDatabase) {
         val pipeline = listOf(
             match(finalMatch),
             group(
-                $$"$metaField.hdtId",
-                addToSet("matchedProperties", $$"$metaField.propertyName"),
+                "\$metaField.hdtId",
+                addToSet("matchedProperties", "\$metaField.propertyName"),
                 push(
                     "matchedEvents",
                     Document()
-                        .append("propertyName", $$"$metaField.propertyName")
-                        .append("value", $$"$value")
-                        .append("timeField", $$"$timeField")
+                        .append("propertyName", "\$metaField.propertyName")
+                        .append("value", "\$value")
+                        .append("timeField", "\$timeField")
                 )
             ),
             match(all("matchedProperties", propertyNames))
