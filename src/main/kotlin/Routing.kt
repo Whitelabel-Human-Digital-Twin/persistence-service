@@ -18,6 +18,9 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.utils.io.*
 import io.swagger.codegen.v3.generators.html.StaticHtmlCodegen
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import org.bson.Document
 
 @OptIn(ExperimentalKtorApi::class)
 fun Application.configureRouting() {
@@ -30,6 +33,16 @@ fun Application.configureRouting() {
 
 
     routing {
+
+        get("/health") {
+            val ok = runCatching {
+                withContext(Dispatchers.IO) {
+                    mongoDatabase.runCommand(Document("ping", 1))
+                }
+            }.isSuccess
+            if (ok) call.respond(HttpStatusCode.OK, mapOf("status" to "ok"))
+            else call.respond(HttpStatusCode.ServiceUnavailable, mapOf("status" to "degraded"))
+        }
 
         openAPI(path = "/openapi", swaggerFile = "openapi/openapi.yaml") {
             codegen = StaticHtmlCodegen()
