@@ -1,0 +1,13 @@
+ktor:
+  application:
+    modules:
+      - io.github.whdt.ApplicationKt.module
+  deployment:
+    port: ${PORT}:8081
+
+db:
+  mongo:
+    name: ${MONGO_DB_NAME}
+    user: ${MONGO_USER}
+    password: ${MONGO_PASSWORD}
+    uri: ${MONGO_URI}
