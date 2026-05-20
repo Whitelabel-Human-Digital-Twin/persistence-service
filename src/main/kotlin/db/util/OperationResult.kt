@@ -112,14 +112,14 @@ suspend fun <A, B> Iterable<A>.sequenceResults(
  * Handles an [OperationResult] by invoking [onSuccess] on the happy path, or responding with
  * a 500 Internal Server Error on failure.
  */
-suspend inline fun <T> OperationResult<T>.getOrRespond(
+suspend inline fun <T> OperationResult<T>.andThen(
     call: ApplicationCall,
     onSuccess: suspend (T) -> Unit
 ) {
     when (this) {
         is Ok -> onSuccess(result)
         is Err -> {
-            call.respond(io.ktor.http.HttpStatusCode.InternalServerError, message)
+            call.respond(HttpStatusCode.InternalServerError, message)
         }
     }
 }

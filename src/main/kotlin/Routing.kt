@@ -7,7 +7,7 @@ import io.github.whdt.db.property.PropertyObservationService
 import io.github.whdt.db.property.PropertyService
 import io.github.whdt.routing.hdt.humanDigitalTwinRoutes
 import io.github.whdt.routing.model.modelsRoutes
-import io.github.whdt.routing.property.propertyEventRoutes
+import io.github.whdt.routing.property.observationRoutes
 import io.github.whdt.routing.property.propertyRoutes
 import io.github.whdt.routing.query.queryRoutes
 import io.ktor.http.*
@@ -51,7 +51,7 @@ fun Application.configureRouting() {
 
         humanDigitalTwinRoutes(hdtService, modelService, propertyObservationService, propertyService, assemblerService)
         modelsRoutes(modelService)
-        propertyEventRoutes(propertyObservationService)
+        observationRoutes(propertyObservationService)
         propertyRoutes(propertyService)
         queryRoutes(propertyObservationService)
     }

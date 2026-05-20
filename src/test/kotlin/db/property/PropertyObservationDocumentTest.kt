@@ -20,7 +20,8 @@ class PropertyObservationDocumentTest {
         val observation = PropertyObservation(
             hdtId = HdtId("hdt-1"),
             modelId = ModelId("hdt-1:body"),
-            propertyId = PropertyId("prop-1"),
+            modelName = ModelName("body"),
+            propertyId = PropertyId("hdt-1:body:heartRate"),
             propertyName = PropertyName("heartRate"),
             value = PropertyValue.IntPropertyValue(72),
             timestamp = now,
@@ -33,7 +34,7 @@ class PropertyObservationDocumentTest {
         assertEquals(ModelId("hdt-1:body"), doc.metaField.modelId)
         assertEquals(ModelName("body"), doc.metaField.modelName)
         assertEquals(PropertyName("heartRate"), doc.metaField.propertyName)
-        assertEquals(PropertyId("prop-1"), doc.metaField.propertyId)
+        assertEquals(PropertyId("hdt-1:body:heartRate"), doc.metaField.propertyId)
         assertEquals(PropertyValue.IntPropertyValue(72), doc.value)
         assertEquals(now, doc.timeField)
         assertEquals(mapOf("source" to "sensor"), doc.metadata)
@@ -45,8 +46,9 @@ class PropertyObservationDocumentTest {
         val observation = PropertyObservation(
             hdtId = HdtId("hdt-1"),
             modelId = ModelId("hdt-1:vitals"),
-            propertyId = PropertyId("p-42"),
-            propertyName = PropertyName("temperature"),
+            modelName = ModelName("vitals"),
+            propertyId = PropertyId("hdt-1:vitals:p-42"),
+            propertyName = PropertyName("p-42"),
             value = PropertyValue.DoublePropertyValue(36.6),
             timestamp = now,
             metadata = emptyMap(),

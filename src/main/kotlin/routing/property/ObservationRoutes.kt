@@ -14,7 +14,7 @@ import io.ktor.server.routing.route
 import io.ktor.utils.io.ExperimentalKtorApi
 
 @OptIn(ExperimentalKtorApi::class)
-fun Route.propertyEventRoutes(
+fun Route.observationRoutes(
     propertyObservationService: PropertyObservationService
 ) {
     route("/observations/batch") {
