@@ -29,7 +29,12 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
-
+      - name: Setup JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: '23'
+          distribution: 'temurin'
+      - run: chmod +x ./gradlew
       - name: Run Claude Code
         id: claude
         uses: anthropics/claude-code-action@v1
