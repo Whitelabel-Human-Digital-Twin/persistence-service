@@ -18,7 +18,7 @@ application {
 }
 
 kotlin {
-    jvmToolchain(23)
+    jvmToolchain(17)
 }
 
 repositories {
@@ -57,7 +57,16 @@ dependencies {
     implementation("io.swagger.codegen.v3:swagger-codegen-generators:${swagger_codegen_version}")
     testImplementation("io.ktor:ktor-server-test-host")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version")
+    testImplementation("org.testcontainers:mongodb:1.20.4")
+    testImplementation("org.testcontainers:junit-jupiter:1.20.4")
+    testImplementation("org.junit.jupiter:junit-jupiter-api:5.10.0")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.10.0")
+    testRuntimeOnly("org.junit.vintage:junit-vintage-engine:5.10.0")
 
     implementation("io.github.whdt:whdt-core:0.8.0")
     implementation("io.github.whdt:whdt-distributed:0.5.0")
+}
+
+tasks.withType<Test> {
+    useJUnitPlatform()
 }

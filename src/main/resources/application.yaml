@@ -7,7 +7,6 @@ ktor:
 
 db:
   mongo:
-    name: ${MONGO_DB_NAME}
-    user: ${MONGO_USER}
-    password: ${MONGO_PASSWORD}
-    uri: ${MONGO_URI}
+    uri: "${?MONGO_URI}"
+    database:
+      name: "${?MONGO_DB_NAME}"
