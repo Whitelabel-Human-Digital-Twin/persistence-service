@@ -7,6 +7,7 @@ import io.github.whdt.core.hdt.model.ModelId
 import io.github.whdt.core.hdt.model.property.PropertyId
 import io.github.whdt.core.hdt.model.property.PropertyName
 import io.github.whdt.core.hdt.query.TagPredicate
+import io.github.whdt.core.hdt.query.matches
 import io.github.whdt.db.property.PropertyDocument
 import org.bson.Document
 import org.junit.jupiter.api.BeforeAll
