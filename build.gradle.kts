@@ -63,8 +63,8 @@ dependencies {
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.10.0")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 
-    implementation("io.github.whdt:whdt-core:0.8.0")
-    implementation("io.github.whdt:whdt-distributed:0.5.0")
+    implementation("io.github.whdt:whdt-core:0.9.0")
+    implementation("io.github.whdt:whdt-distributed:0.6.0")
 }
 
 tasks.withType<Test> {
