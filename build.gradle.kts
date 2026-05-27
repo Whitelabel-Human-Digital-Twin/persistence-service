@@ -23,10 +23,12 @@ kotlin {
 
 repositories {
     maven {
-        url = uri("https://maven.pkg.github.com/Whitelabel-Human-Digital-Twin/whdt") // or the correct GitHub repo
+        url = uri("https://maven.pkg.github.com/Whitelabel-Human-Digital-Twin/whdt")
         credentials {
-            username = project.findProperty("gpr.user") as String? ?: System.getenv("GPR_USER")
-            password = project.findProperty("gpr.key") as String? ?: System.getenv("GPR_TOKEN")
+            username = System.getenv("GPR_USER")
+                ?: providers.gradleProperty("gpr.user").orNull
+            password = System.getenv("GPR_TOKEN")
+                ?: providers.gradleProperty("gpr.key").orNull
         }
     }
     mavenCentral()
