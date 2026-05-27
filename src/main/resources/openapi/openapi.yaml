@@ -700,6 +700,10 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Storage'
+        tags:
+          type: object
+          additionalProperties:
+            type: string
     model:
       type: object
       title: model
@@ -720,6 +724,12 @@ components:
           items:
             $ref: '#/components/schemas/property'
         id:
+          type: string
+        tags:
+          type: object
+          additionalProperties:
+            type: string
+        format:
           type: string
     human-digital-twin:
       type: object
@@ -745,6 +755,10 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Storage'
+        tags:
+          type: object
+          additionalProperties:
+            type: string
     ModelDocument:
       type: object
       title: io.github.whdt.db.model.ModelDocument
@@ -761,6 +775,12 @@ components:
         modelName:
           type: string
         modelDescription:
+          type: string
+        tags:
+          type: object
+          additionalProperties:
+            type: string
+        format:
           type: string
         lastUpdated:
           type: string
@@ -798,10 +818,13 @@ components:
         initialValue:
           $ref: '#/components/schemas/PropertyValue'
           nullable: true
-        metadata:
+        tags:
           type: object
           additionalProperties:
             type: string
+        coding:
+          $ref: '#/components/schemas/Coding'
+          nullable: true
         lastUpdated:
           type: string
           format: date-time
@@ -887,6 +910,17 @@ components:
       - $ref: '#/components/schemas/int-value'
       - $ref: '#/components/schemas/long-value'
       - $ref: '#/components/schemas/string-value'
+    Coding:
+      type: object
+      title: io.github.whdt.core.hdt.model.property.Coding
+      required:
+      - system
+      - code
+      properties:
+        system:
+          type: string
+        code:
+          type: string
     PropertyObservationDocument:
       type: object
       title: io.github.whdt.db.property.PropertyObservationDocument
@@ -959,6 +993,13 @@ components:
           nullable: true
         id:
           type: string
+        tags:
+          type: object
+          additionalProperties:
+            type: string
+        coding:
+          $ref: '#/components/schemas/Coding'
+          nullable: true
     PropertySpecEntry:
       type: object
       title: io.github.whdt.db.assembler.PropertySpecEntry
@@ -979,10 +1020,13 @@ components:
         initialValue:
           $ref: '#/components/schemas/PropertyValue'
           nullable: true
-        metadata:
+        tags:
           type: object
           additionalProperties:
             type: string
+        coding:
+          $ref: '#/components/schemas/Coding'
+          nullable: true
     ModelSpecEntry:
       type: object
       title: io.github.whdt.db.assembler.ModelSpecEntry
@@ -999,6 +1043,12 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/PropertySpecEntry'
+        tags:
+          type: object
+          additionalProperties:
+            type: string
+        format:
+          type: string
     HdtSpecResponse:
       type: object
       title: io.github.whdt.db.assembler.HdtSpecResponse
@@ -1008,7 +1058,7 @@ components:
       - digitalInterfaces
       - storages
       - models
-      - metadata
+      - tags
       properties:
         hdtId:
           type: string
@@ -1028,7 +1078,7 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ModelSpecEntry'
-        metadata:
+        tags:
           type: object
           additionalProperties:
             type: string

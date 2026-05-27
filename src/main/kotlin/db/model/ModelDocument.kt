@@ -1,10 +1,12 @@
 package io.github.whdt.db.model
 
 import io.github.whdt.core.hdt.HdtId
+import io.github.whdt.core.hdt.model.Format
 import io.github.whdt.core.hdt.model.Model
 import io.github.whdt.core.hdt.model.ModelDescription
 import io.github.whdt.core.hdt.model.ModelId
 import io.github.whdt.core.hdt.model.ModelName
+import io.github.whdt.core.hdt.model.WellKnownFormats
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import org.bson.Document
@@ -17,19 +19,22 @@ data class ModelDocument(
     val modelId: ModelId,
     val modelName: ModelName,
     val modelDescription: ModelDescription,
+    val tags: Map<String, String> = emptyMap(),
+    val format: Format = WellKnownFormats.UNSPECIFIED,
     val lastUpdated: Instant = Clock.System.now(),
 ) {
     fun toDocument(): Document = Document.parse(Json.encodeToString(serializer(), this))
 
     companion object {
-        fun fromWhdtModel(model: Model): ModelDocument {
-            return ModelDocument(
-                hdtId = model.hdtId,
-                modelId = model.id,
-                modelName = model.name,
-                modelDescription = model.description,
-            )
-        }
+        fun fromWhdtModel(model: Model): ModelDocument = ModelDocument(
+            hdtId = model.hdtId,
+            modelId = model.id,
+            modelName = model.name,
+            modelDescription = model.description,
+            tags = model.tags,
+            format = model.format,
+        )
+
         fun fromDocument(document: Document): ModelDocument {
             val copy = Document(document)
             copy.remove("_id")

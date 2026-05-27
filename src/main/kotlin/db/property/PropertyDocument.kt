@@ -2,10 +2,12 @@ package io.github.whdt.db.property
 
 import io.github.whdt.core.hdt.HdtId
 import io.github.whdt.core.hdt.model.ModelId
+import io.github.whdt.core.hdt.model.property.Coding
 import io.github.whdt.core.hdt.model.property.Property
 import io.github.whdt.core.hdt.model.property.PropertyId
 import io.github.whdt.core.hdt.model.property.PropertyName
 import io.github.whdt.core.hdt.model.property.PropertyValue
+import io.github.whdt.core.hdt.model.property.toPropertyValue
 import kotlinx.serialization.Serializable
 import org.bson.Document
 import java.util.Date
@@ -23,7 +25,8 @@ data class PropertyDocument(
     val description: String,
     val declaredType: String,
     val initialValue: PropertyValue? = null,
-    val metadata: Map<String, String> = emptyMap(),
+    val tags: Map<String, String> = emptyMap(),
+    val coding: Coding? = null,
     val lastUpdated: Instant = Clock.System.now(),
 ) {
     fun toDocument(): Document {
@@ -34,13 +37,16 @@ data class PropertyDocument(
             .append("propertyName", propertyName.value)
             .append("description", description)
             .append("declaredType", declaredType)
-            .append("metadata", Document(metadata))
+            .append("tags", Document(tags))
             .append("lastUpdated", Date.from(lastUpdated.toJavaInstant()))
         if (initialValue != null) {
             doc.append(
                 "initialValue",
                 Document("type", declaredType).append("value", initialValue.toBsonValue())
             )
+        }
+        if (coding != null) {
+            doc.append("coding", Document("system", coding.system).append("code", coding.code))
         }
         return doc
     }
@@ -55,7 +61,8 @@ data class PropertyDocument(
                 description = property.description.value,
                 declaredType = property.declaredType.name,
                 initialValue = property.initialValue,
-                metadata = property.metadata,
+                tags = property.tags,
+                coding = property.coding,
             )
 
         fun fromDocument(doc: Document): PropertyDocument? {
@@ -65,11 +72,17 @@ data class PropertyDocument(
             val propertyNameRaw = doc.getString("propertyName") ?: return null
             val description = doc.getString("description") ?: return null
             val declaredType = doc.getString("declaredType") ?: return null
-            val metadataDoc = doc.get("metadata", Document::class.java)
-            val metadata = metadataDoc?.entries?.associate { it.key to it.value.toString() } ?: emptyMap()
+            val tagsDoc = doc.get("tags", Document::class.java)
+            val tags = tagsDoc?.entries?.associate { it.key to it.value.toString() } ?: emptyMap()
             val lastUpdated = doc.getDate("lastUpdated")?.toInstant()?.toKotlinInstant() ?: Clock.System.now()
             val initialValueDoc = doc.get("initialValue", Document::class.java)
-            val initialValue = initialValueDoc?.get("value")?.pv()
+            val initialValue = initialValueDoc?.get("value")?.toPropertyValue()
+            val codingDoc = doc.get("coding", Document::class.java)
+            val coding = codingDoc?.let {
+                val system = it.getString("system") ?: return@let null
+                val code = it.getString("code") ?: return@let null
+                Coding(system, code)
+            }
             return PropertyDocument(
                 hdtId = HdtId(hdtIdRaw),
                 modelId = ModelId(modelIdRaw),
@@ -78,7 +91,8 @@ data class PropertyDocument(
                 description = description,
                 declaredType = declaredType,
                 initialValue = initialValue,
-                metadata = metadata,
+                tags = tags,
+                coding = coding,
                 lastUpdated = lastUpdated,
             )
         }

@@ -4,7 +4,7 @@ import io.github.whdt.core.hdt.HdtId
 import io.github.whdt.core.hdt.model.ModelName
 import io.github.whdt.core.hdt.model.property.PropertyName
 import io.github.whdt.core.hdt.model.property.PropertyValue
-import io.github.whdt.db.property.pv
+import io.github.whdt.core.hdt.model.property.toPropertyValue
 import kotlinx.serialization.Serializable
 import org.bson.Document
 import kotlin.time.Instant
@@ -28,7 +28,7 @@ data class EventMatch(
         fun fromDocument(doc: Document): EventMatch? {
             val name = doc.getString("propertyName") ?: return null
             val value = doc["value"] ?: return null
-            val propertyValue = value.pv() ?: return null
+            val propertyValue = value.toPropertyValue() ?: return null
             val timeField = doc.getDate("timeField").toInstant().toKotlinInstant()
             return EventMatch(PropertyName(name), propertyValue, timeField)
         }

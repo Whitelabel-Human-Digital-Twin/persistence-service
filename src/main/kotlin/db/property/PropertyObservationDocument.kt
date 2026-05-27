@@ -7,6 +7,7 @@ import io.github.whdt.core.hdt.model.property.PropertyId
 import io.github.whdt.core.hdt.model.property.PropertyName
 import io.github.whdt.core.hdt.model.property.PropertyObservation
 import io.github.whdt.core.hdt.model.property.PropertyValue
+import io.github.whdt.core.hdt.model.property.toPropertyValue
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import org.bson.Document
@@ -20,16 +21,6 @@ import kotlin.time.toKotlinInstant
 //   db.adminCommand({ renameCollection: "yourdb.property_events", to: "yourdb.observations" })
 // If zero-downtime is required, keep the old collection name active during the transition
 // and handle both names transiently until migration is confirmed complete.
-
-fun Any.pv(): PropertyValue? = when (this) {
-    is Int -> PropertyValue.IntPropertyValue(this)
-    is Long -> PropertyValue.LongPropertyValue(this)
-    is Float -> PropertyValue.FloatPropertyValue(this)
-    is Double -> PropertyValue.DoublePropertyValue(this)
-    is String -> PropertyValue.StringPropertyValue(this)
-    is Boolean -> PropertyValue.BooleanPropertyValue(this)
-    else -> null
-}
 
 fun PropertyValue.toBsonValue(): Any? = when (this) {
     is PropertyValue.StringPropertyValue -> this.value
@@ -92,7 +83,7 @@ data class PropertyObservationDocument(
         fun fromDocument(doc: Document): PropertyObservationDocument? {
             val meta = doc.get("metaField", Document::class.java)
             val metaField = PropertyEventMetadata.fromDocument(meta) ?: return null
-            val value = doc["value"]?.pv() ?: return null
+            val value = doc["value"]?.toPropertyValue() ?: return null
             val time = doc.getDate("timeField")?.toInstant()?.toKotlinInstant() ?: return null
             val metadataDoc = doc.get("metadata", Document::class.java)
             val metadata = metadataDoc?.entries

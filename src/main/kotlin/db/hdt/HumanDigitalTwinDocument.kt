@@ -16,7 +16,7 @@ data class HumanDigitalTwinDocument(
     val physicalInterfaces: List<PhysicalInterface>,
     val digitalInterfaces: List<DigitalInterface>,
     val storages: List<Storage>,
-    val metadata: Map<String, String>
+    val tags: Map<String, String>,
 ) {
 
     fun toDocument(): Document = Document.parse(Json.encodeToString(serializer(), this))
@@ -28,7 +28,7 @@ data class HumanDigitalTwinDocument(
                 physicalInterfaces = hdt.physicalInterfaces,
                 digitalInterfaces = hdt.digitalInterfaces,
                 storages = hdt.storages,
-                metadata = hdt.metadata,
+                tags = hdt.tags,
             )
         fun fromDocument(document: Document): HumanDigitalTwinDocument {
             val copy = Document(document)
