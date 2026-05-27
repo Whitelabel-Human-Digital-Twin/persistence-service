@@ -11,6 +11,8 @@ import com.mongodb.client.model.ReplaceOptions
 import io.github.whdt.core.hdt.HdtId
 import io.github.whdt.core.hdt.model.ModelId
 import io.github.whdt.core.hdt.model.property.Property
+import io.github.whdt.core.hdt.query.TagPredicate
+import io.github.whdt.db.query.toBson
 import io.github.whdt.db.util.OperationResult
 import io.github.whdt.db.util.runCatchingResult
 import kotlinx.coroutines.Dispatchers
@@ -44,6 +46,11 @@ class PropertyService(private val database: MongoDatabase) {
     suspend fun findByModelId(modelId: ModelId): List<PropertyDocument> = withContext(Dispatchers.IO) {
         collection.find(eq("modelId", modelId.value)).toList().mapNotNull(PropertyDocument::fromDocument)
     }
+
+    suspend fun findByTagPredicate(predicate: TagPredicate): List<PropertyDocument> =
+        withContext(Dispatchers.IO) {
+            collection.find(predicate.toBson()).toList().mapNotNull(PropertyDocument::fromDocument)
+        }
 
     suspend fun batchUpsert(hdtId: HdtId, properties: List<Property>): OperationResult<Map<String, Int>> =
         withContext(Dispatchers.IO) {

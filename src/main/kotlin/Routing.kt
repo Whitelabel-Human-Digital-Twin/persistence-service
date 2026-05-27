@@ -66,6 +66,6 @@ fun Application.configureRouting() {
         modelsRoutes(modelService)
         observationRoutes(propertyObservationService)
         propertyRoutes(propertyService)
-        queryRoutes(propertyObservationService)
+        queryRoutes(propertyObservationService, propertyService)
     }
 }

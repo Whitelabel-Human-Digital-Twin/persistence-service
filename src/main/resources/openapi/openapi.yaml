@@ -379,6 +379,30 @@ paths:
           description: Observations created
         '500':
           description: Error creating observations
+  /query/property:
+    post:
+      operationId: query/property
+      summary: Query Property specs by tag predicate
+      description: Returns Property specs whose tags satisfy the given TagPredicate.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TagPredicate'
+        required: true
+      responses:
+        '200':
+          description: Matching Property specs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PropertyDocument'
+        '400':
+          description: Malformed TagPredicate body
+        '500':
+          description: Query failed
   /query/event/values/valuesById:
     post:
       operationId: query/event/values/byId
@@ -487,6 +511,94 @@ paths:
                   $ref: '#/components/schemas/PropertiesByComparisonsAggregateResponse'
 components:
   schemas:
+    TagPredicate:
+      title: io.github.whdt.core.hdt.query.TagPredicate
+      oneOf:
+        - $ref: '#/components/schemas/TagPredicate-eq'
+        - $ref: '#/components/schemas/TagPredicate-in'
+        - $ref: '#/components/schemas/TagPredicate-has'
+        - $ref: '#/components/schemas/TagPredicate-and'
+        - $ref: '#/components/schemas/TagPredicate-or'
+        - $ref: '#/components/schemas/TagPredicate-not'
+      discriminator:
+        propertyName: type
+        mapping:
+          eq:  '#/components/schemas/TagPredicate-eq'
+          in:  '#/components/schemas/TagPredicate-in'
+          has: '#/components/schemas/TagPredicate-has'
+          and: '#/components/schemas/TagPredicate-and'
+          or:  '#/components/schemas/TagPredicate-or'
+          not: '#/components/schemas/TagPredicate-not'
+    TagPredicate-eq:
+      type: object
+      title: TagPredicate-eq
+      required: [type, key, value]
+      properties:
+        type:
+          type: string
+          enum: [eq]
+        key:
+          type: string
+        value:
+          type: string
+    TagPredicate-in:
+      type: object
+      title: TagPredicate-in
+      required: [type, key, values]
+      properties:
+        type:
+          type: string
+          enum: [in]
+        key:
+          type: string
+        values:
+          type: array
+          items:
+            type: string
+    TagPredicate-has:
+      type: object
+      title: TagPredicate-has
+      required: [type, key]
+      properties:
+        type:
+          type: string
+          enum: [has]
+        key:
+          type: string
+    TagPredicate-and:
+      type: object
+      title: TagPredicate-and
+      required: [type, terms]
+      properties:
+        type:
+          type: string
+          enum: [and]
+        terms:
+          type: array
+          items:
+            $ref: '#/components/schemas/TagPredicate'
+    TagPredicate-or:
+      type: object
+      title: TagPredicate-or
+      required: [type, terms]
+      properties:
+        type:
+          type: string
+          enum: [or]
+        terms:
+          type: array
+          items:
+            $ref: '#/components/schemas/TagPredicate'
+    TagPredicate-not:
+      type: object
+      title: TagPredicate-not
+      required: [type, term]
+      properties:
+        type:
+          type: string
+          enum: [not]
+        term:
+          $ref: '#/components/schemas/TagPredicate'
     PropertyComparisonDto:
       type: object
       required:
