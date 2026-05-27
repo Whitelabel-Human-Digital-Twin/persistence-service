@@ -2,6 +2,7 @@ package io.github.whdt.db.property
 
 import io.github.whdt.core.hdt.HdtId
 import io.github.whdt.core.hdt.model.ModelId
+import io.github.whdt.core.hdt.model.property.Coding
 import io.github.whdt.core.hdt.model.property.PropertyId
 import io.github.whdt.core.hdt.model.property.PropertyName
 import io.github.whdt.core.hdt.model.property.PropertyValue
@@ -23,7 +24,7 @@ class PropertyDocumentTest {
             description = "Ambient temperature",
             declaredType = "DOUBLE",
             initialValue = PropertyValue.DoublePropertyValue(20.0),
-            metadata = mapOf("unit" to "celsius"),
+            tags = mapOf("unit" to "celsius"),
         )
 
         val bson = original.toDocument()
@@ -37,7 +38,8 @@ class PropertyDocumentTest {
         assertEquals(original.description, restored.description)
         assertEquals(original.declaredType, restored.declaredType)
         assertEquals(original.initialValue, restored.initialValue)
-        assertEquals(original.metadata, restored.metadata)
+        assertEquals(original.tags, restored.tags)
+        assertNull(restored.coding)
     }
 
     @Test
@@ -50,7 +52,7 @@ class PropertyDocumentTest {
             description = "Device status",
             declaredType = "STRING",
             initialValue = null,
-            metadata = emptyMap(),
+            tags = emptyMap(),
         )
 
         val bson = original.toDocument()
@@ -78,5 +80,46 @@ class PropertyDocumentTest {
         assertNotNull(initialValueDoc)
         assertEquals("INT", initialValueDoc.getString("type"))
         assertEquals(42, initialValueDoc["value"])
+    }
+
+    @Test
+    fun `toDocument and fromDocument round-trip with non-null coding`() {
+        val coding = Coding(system = "http://loinc.org", code = "8867-4")
+        val original = PropertyDocument(
+            hdtId = HdtId("hdt-3"),
+            modelId = ModelId("model-3"),
+            propertyId = PropertyId("prop-3"),
+            propertyName = PropertyName("heartRate"),
+            description = "Heart rate",
+            declaredType = "INT",
+            tags = mapOf("unit" to "bpm"),
+            coding = coding,
+        )
+
+        val bson = original.toDocument()
+        val restored = PropertyDocument.fromDocument(bson)
+
+        assertNotNull(restored)
+        assertEquals(coding, restored.coding)
+        assertEquals(original.tags, restored.tags)
+    }
+
+    @Test
+    fun `toDocument and fromDocument round-trip with null coding defaults to null`() {
+        val original = PropertyDocument(
+            hdtId = HdtId("hdt-4"),
+            modelId = ModelId("model-4"),
+            propertyId = PropertyId("prop-4"),
+            propertyName = PropertyName("weight"),
+            description = "Body weight",
+            declaredType = "FLOAT",
+            coding = null,
+        )
+
+        val bson = original.toDocument()
+        val restored = PropertyDocument.fromDocument(bson)
+
+        assertNotNull(restored)
+        assertNull(restored.coding)
     }
 }

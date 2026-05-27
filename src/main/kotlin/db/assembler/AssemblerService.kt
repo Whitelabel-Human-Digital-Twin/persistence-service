@@ -3,6 +3,9 @@ package io.github.whdt.db.assembler
 import io.github.whdt.core.hdt.HdtId
 import io.github.whdt.core.hdt.interfaces.digital.DigitalInterface
 import io.github.whdt.core.hdt.interfaces.physical.PhysicalInterface
+import io.github.whdt.core.hdt.model.Format
+import io.github.whdt.core.hdt.model.WellKnownFormats
+import io.github.whdt.core.hdt.model.property.Coding
 import io.github.whdt.core.hdt.model.property.PropertyValue
 import io.github.whdt.core.hdt.storage.Storage
 import io.github.whdt.db.hdt.HdtService
@@ -22,7 +25,7 @@ data class HdtSpecResponse(
     val digitalInterfaces: List<DigitalInterface>,
     val storages: List<Storage>,
     val models: List<ModelSpecEntry>,
-    val metadata: Map<String, String>,
+    val tags: Map<String, String>,
 )
 
 @Serializable
@@ -30,6 +33,8 @@ data class ModelSpecEntry(
     val modelId: String,
     val modelName: String,
     val properties: List<PropertySpecEntry>,
+    val tags: Map<String, String> = emptyMap(),
+    val format: Format = WellKnownFormats.UNSPECIFIED,
 )
 
 @Serializable
@@ -39,7 +44,8 @@ data class PropertySpecEntry(
     val description: String,
     val declaredType: String,
     val initialValue: PropertyValue? = null,
-    val metadata: Map<String, String>,
+    val tags: Map<String, String> = emptyMap(),
+    val coding: Coding? = null,
 )
 
 @Serializable
@@ -77,9 +83,12 @@ class AssemblerService(
                         description = prop.description,
                         declaredType = prop.declaredType,
                         initialValue = prop.initialValue,
-                        metadata = prop.metadata,
+                        tags = prop.tags,
+                        coding = prop.coding,
                     )
-                }
+                },
+                tags = model.tags,
+                format = model.format,
             )
         }
 
@@ -90,7 +99,7 @@ class AssemblerService(
                 digitalInterfaces = hdt.digitalInterfaces,
                 storages = hdt.storages,
                 models = modelEntries,
-                metadata = hdt.metadata,
+                tags = hdt.tags,
             )
         )
     }
