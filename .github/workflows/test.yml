@@ -33,6 +33,6 @@ jobs:
 
       - name: Run tests
         env:
-          ORG_GRADLE_PROJECT_gpr.user: ${{ secrets.GPR_USER }}
-          ORG_GRADLE_PROJECT_gpr.key: ${{ secrets.GPR_TOKEN }}
+          GPR_USER: ${{ secrets.GPR_USER }}
+          GPR_TOKEN: ${{ secrets.GPR_TOKEN }}
         run: ./gradlew test
