@@ -32,4 +32,7 @@ jobs:
         run: chmod +x gradlew
 
       - name: Run tests
+        env:
+          ORG_GRADLE_PROJECT_gpr.user: ${{ secrets.GPR_USER }}
+          ORG_GRADLE_PROJECT_gpr.key: ${{ secrets.GPR_TOKEN }}
         run: ./gradlew test
