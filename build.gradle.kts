@@ -3,6 +3,7 @@ val logback_version: String by project
 val mongo_version: String by project
 val ktor_version: String by project
 val swagger_codegen_version: String by project
+val testcontainers_version: String by project
 
 plugins {
     kotlin("jvm") version "2.3.0"
@@ -57,10 +58,11 @@ dependencies {
     implementation("io.ktor:ktor-server-openapi:$ktor_version")
     implementation("io.ktor:ktor-server-swagger:$ktor_version")
     implementation("io.swagger.codegen.v3:swagger-codegen-generators:${swagger_codegen_version}")
+    testImplementation(platform("org.testcontainers:testcontainers-bom:$testcontainers_version"))
     testImplementation("io.ktor:ktor-server-test-host")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5:$kotlin_version")
-    testImplementation("org.testcontainers:mongodb:1.20.4")
-    testImplementation("org.testcontainers:junit-jupiter:1.20.4")
+    testImplementation("org.testcontainers:mongodb")
+    testImplementation("org.testcontainers:junit-jupiter")
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.10.0")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.10.0")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
