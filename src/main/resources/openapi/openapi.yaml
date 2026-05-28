@@ -491,6 +491,126 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/PropertyStatsPerHdt'
+  /views:
+    get:
+      operationId: views/get
+      summary: List Views
+      description: Returns all stored Views
+      responses:
+        '200':
+          description: All Views
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ViewDocument'
+    post:
+      operationId: views/post
+      summary: Create View
+      description: Creates or replaces a View by name
+      requestBody:
+        description: The View spec to store
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/View'
+        required: true
+      responses:
+        '201':
+          description: View created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ViewDocument'
+  /views/{name}:
+    get:
+      operationId: views/{name}/get
+      summary: Get View
+      description: Get a View by name
+      parameters:
+      - name: name
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: View found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ViewDocument'
+        '404':
+          description: View not found
+    put:
+      operationId: views/{name}/put
+      summary: Upsert View
+      description: Create or replace a View by name (path name takes precedence)
+      parameters:
+      - name: name
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        description: The updated View spec
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/View'
+        required: true
+      responses:
+        '200':
+          description: View upserted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ViewDocument'
+    delete:
+      operationId: views/{name}/delete
+      summary: Delete View
+      description: Delete a View by name
+      parameters:
+      - name: name
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '204':
+          description: View deleted
+        '404':
+          description: View not found
+  /views/{name}/execute:
+    post:
+      operationId: views/{name}/execute
+      summary: Execute View
+      description: Run a stored View against HDTs. Empty or absent hdtIds executes against all HDTs.
+      parameters:
+      - name: name
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        description: Optional scope — which HDT IDs to execute against
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExecuteScopeRequest'
+        required: false
+      responses:
+        '200':
+          description: ViewResult per HDT id
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  $ref: '#/components/schemas/ViewResult'
+        '404':
+          description: View not found
   /query/event/comparison:
     post:
       operationId: query/event/comparison
@@ -1375,3 +1495,95 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/EventMatch'
+    View:
+      type: object
+      title: io.github.whdt.core.hdt.view.View
+      required:
+      - name
+      properties:
+        name:
+          type: string
+        predicate:
+          $ref: '#/components/schemas/TagPredicate'
+          nullable: true
+        groupByKeys:
+          type: array
+          items:
+            type: string
+    ViewDocument:
+      type: object
+      title: io.github.whdt.db.view.ViewDocument
+      required:
+      - name
+      properties:
+        name:
+          type: string
+        predicate:
+          $ref: '#/components/schemas/TagPredicate'
+          nullable: true
+        groupByKeys:
+          type: array
+          items:
+            type: string
+    ViewResult:
+      title: io.github.whdt.core.hdt.view.ViewResult
+      description: >
+        Result of executing a View. Either a flat list of matching properties
+        or a grouped result keyed by a tag value.
+        Observed serialized shape of ViewResult.Grouped:
+          {"type":"grouped","key":"<groupByKey>","buckets":[[<tagValue_or_null>,{"type":"flat","properties":[...]}],...]}
+        The buckets field is a list of [key, flat-result] pairs (BucketListSerializer) to support null bucket keys.
+      oneOf:
+        - $ref: '#/components/schemas/ViewResult-flat'
+        - $ref: '#/components/schemas/ViewResult-grouped'
+      discriminator:
+        propertyName: type
+        mapping:
+          flat: '#/components/schemas/ViewResult-flat'
+          grouped: '#/components/schemas/ViewResult-grouped'
+    ViewResult-flat:
+      type: object
+      title: ViewResult-flat
+      required:
+      - type
+      properties:
+        type:
+          type: string
+          enum: [flat]
+        properties:
+          type: array
+          items:
+            $ref: '#/components/schemas/property'
+    ViewResult-grouped:
+      type: object
+      title: ViewResult-grouped
+      required:
+      - type
+      - key
+      - buckets
+      properties:
+        type:
+          type: string
+          enum: [grouped]
+        key:
+          type: string
+        buckets:
+          type: array
+          description: List of [bucketKey, ViewResult.Flat] pairs; bucketKey may be null for properties with no value for the groupByKey tag.
+          items:
+            type: array
+            minItems: 2
+            maxItems: 2
+            prefixItems:
+              - type: string
+                nullable: true
+              - $ref: '#/components/schemas/ViewResult-flat'
+    ExecuteScopeRequest:
+      type: object
+      title: io.github.whdt.routing.view.ExecuteScopeRequest
+      properties:
+        hdtIds:
+          type: array
+          items:
+            type: string
+          description: HDT IDs to execute against. Empty or absent means all HDTs.

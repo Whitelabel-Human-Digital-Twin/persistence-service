@@ -4,9 +4,11 @@ import io.github.whdt.core.hdt.HdtId
 import io.github.whdt.core.hdt.model.ModelId
 import io.github.whdt.core.hdt.model.property.Coding
 import io.github.whdt.core.hdt.model.property.Property
+import io.github.whdt.core.hdt.model.property.PropertyDescription
 import io.github.whdt.core.hdt.model.property.PropertyId
 import io.github.whdt.core.hdt.model.property.PropertyName
 import io.github.whdt.core.hdt.model.property.PropertyValue
+import io.github.whdt.core.hdt.model.property.PropertyValueType
 import io.github.whdt.core.hdt.model.property.toPropertyValue
 import kotlinx.serialization.Serializable
 import org.bson.Document
@@ -50,6 +52,16 @@ data class PropertyDocument(
         }
         return doc
     }
+
+    fun toProperty(): Property = Property(
+        modelId = modelId,
+        name = propertyName,
+        description = PropertyDescription(description),
+        declaredType = PropertyValueType.valueOf(declaredType),
+        initialValue = initialValue,
+        tags = tags,
+        coding = coding,
+    )
 
     companion object {
         fun fromWhdtProperty(hdtId: HdtId, property: Property): PropertyDocument =
