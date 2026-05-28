@@ -5,11 +5,13 @@ import io.github.whdt.db.hdt.HdtService
 import io.github.whdt.db.model.ModelService
 import io.github.whdt.db.property.PropertyObservationService
 import io.github.whdt.db.property.PropertyService
+import io.github.whdt.db.view.ViewService
 import io.github.whdt.routing.hdt.humanDigitalTwinRoutes
 import io.github.whdt.routing.model.modelsRoutes
 import io.github.whdt.routing.property.observationRoutes
 import io.github.whdt.routing.property.propertyRoutes
 import io.github.whdt.routing.query.queryRoutes
+import io.github.whdt.routing.view.viewRoutes
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.plugins.openapi.*
@@ -29,6 +31,7 @@ fun Application.configureRouting() {
     val modelService = ModelService(mongoDatabase)
     val propertyObservationService = PropertyObservationService(mongoDatabase)
     val propertyService = PropertyService(mongoDatabase)
+    val viewService = ViewService(mongoDatabase)
     val assemblerService = AssemblerService(hdtService, modelService, propertyService, propertyObservationService)
 
 
@@ -67,5 +70,6 @@ fun Application.configureRouting() {
         observationRoutes(propertyObservationService)
         propertyRoutes(propertyService)
         queryRoutes(propertyObservationService, propertyService)
+        viewRoutes(viewService, hdtService, propertyService)
     }
 }
