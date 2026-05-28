@@ -1,9 +1,6 @@
 package io.github.whdt
 
 import com.mongodb.client.MongoClients
-import com.mongodb.client.MongoDatabase
-import org.junit.jupiter.api.AfterAll
-import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.TestInstance
 import org.testcontainers.containers.MongoDBContainer
 import org.testcontainers.junit.jupiter.Container
@@ -17,20 +14,17 @@ import org.testcontainers.junit.jupiter.Testcontainers
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 abstract class MongoIntegrationTest {
 
-    @Container
-    val container: MongoDBContainer = MongoDBContainer("mongo:7.0")
-
-    protected lateinit var database: MongoDatabase
-    private lateinit var client: com.mongodb.client.MongoClient
-
-    @BeforeAll
-    fun setupDatabase() {
-        client = MongoClients.create(container.connectionString)
-        database = client.getDatabase("test-${System.currentTimeMillis()}")
+    companion object {
+        @Container
+        @JvmStatic
+        val container = MongoDBContainer("mongo:7.0")
     }
 
-    @AfterAll
-    fun tearDownDatabase() {
-        client.close()
+    protected val client by lazy {
+        MongoClients.create(container.connectionString)
+    }
+
+    protected val database by lazy {
+        client.getDatabase("test")
     }
 }
