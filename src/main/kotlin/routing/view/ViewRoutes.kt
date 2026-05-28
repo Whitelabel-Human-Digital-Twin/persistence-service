@@ -4,6 +4,7 @@ import io.github.whdt.core.hdt.HdtId
 import io.github.whdt.core.hdt.view.View
 import io.github.whdt.core.hdt.view.ViewName
 import io.github.whdt.core.hdt.view.ViewResult
+import io.github.whdt.core.hdt.view.execute
 import io.github.whdt.db.hdt.HdtService
 import io.github.whdt.db.property.PropertyService
 import io.github.whdt.db.view.ViewDocument
@@ -151,10 +152,10 @@ fun Route.viewRoutes(
                     hdtService.findAll().map { it.hdtId.id }
                 }
 
-                val result: Map<String, ViewResult> = targetIds.associate { idStr ->
+                val result: Map<String, ViewResult> = targetIds.associateWith { idStr ->
                     val hdtId = HdtId(idStr)
                     val props = propertyService.findByHdtId(hdtId).map { it.toProperty() }
-                    idStr to view.execute(props)
+                    view.execute(props)
                 }
                 call.respond(HttpStatusCode.OK, result)
             }.describe {
