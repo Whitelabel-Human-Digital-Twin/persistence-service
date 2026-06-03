@@ -1,14 +1,14 @@
-package io.github.whdt.routing.hdt
+package routing.hdt
 
-import io.github.whdt.core.hdt.HumanDigitalTwin
-import io.github.whdt.db.hdt.HdtService
-import io.github.whdt.db.hdt.HumanDigitalTwinDocument
-import io.github.whdt.db.model.ModelService
-import io.github.whdt.db.assembler.AssemblerService
-import io.github.whdt.db.property.PropertyObservationService
-import io.github.whdt.db.property.PropertyService
-import io.github.whdt.db.util.getOrRespond
-import io.github.whdt.db.util.sequenceResults
+import io.github.ktwinx.core.hdt.HumanDigitalTwin
+import db.hdt.HdtService
+import db.hdt.HumanDigitalTwinDocument
+import db.model.ModelService
+import db.assembler.AssemblerService
+import db.property.PropertyObservationService
+import db.property.PropertyService
+import db.util.getOrRespond
+import db.util.sequenceResults
 import io.ktor.http.*
 import io.ktor.openapi.*
 import io.ktor.server.request.*

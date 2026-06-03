@@ -1,11 +1,11 @@
-package io.github.whdt.db.property
+package db.property
 
-import io.github.whdt.MongoIntegrationTest
-import io.github.whdt.core.hdt.HdtId
-import io.github.whdt.core.hdt.model.ModelId
-import io.github.whdt.core.hdt.model.property.PropertyId
-import io.github.whdt.core.hdt.model.property.PropertyName
-import io.github.whdt.core.hdt.query.TagPredicate
+import MongoIntegrationTest
+import io.github.ktwinx.core.hdt.HdtId
+import io.github.ktwinx.core.hdt.model.ModelId
+import io.github.ktwinx.core.hdt.model.property.PropertyId
+import io.github.ktwinx.core.hdt.model.property.PropertyName
+import io.github.ktwinx.core.hdt.query.TagPredicate
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test

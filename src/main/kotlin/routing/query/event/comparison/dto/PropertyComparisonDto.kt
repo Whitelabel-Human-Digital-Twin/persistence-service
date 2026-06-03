@@ -1,7 +1,7 @@
-package io.github.whdt.routing.query.event.comparison.dto
+package routing.query.event.comparison.dto
 
-import io.github.whdt.core.hdt.model.ModelName
-import io.github.whdt.routing.query.event.comparison.ComparisonOperator
+import io.github.ktwinx.core.hdt.model.ModelName
+import routing.query.event.comparison.ComparisonOperator
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
 import kotlin.time.Instant

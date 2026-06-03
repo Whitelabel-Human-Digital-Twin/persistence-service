@@ -1,4 +1,4 @@
-package io.github.whdt.db.view
+package db.view
 
 import com.mongodb.client.MongoCollection
 import com.mongodb.client.MongoDatabase
@@ -6,8 +6,8 @@ import com.mongodb.client.model.Filters
 import com.mongodb.client.model.IndexOptions
 import com.mongodb.client.model.Indexes
 import com.mongodb.client.model.ReplaceOptions
-import io.github.whdt.core.hdt.view.View
-import io.github.whdt.core.hdt.view.ViewName
+import io.github.ktwinx.core.hdt.view.View
+import io.github.ktwinx.core.hdt.view.ViewName
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.bson.Document

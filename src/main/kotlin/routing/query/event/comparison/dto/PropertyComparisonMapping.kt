@@ -1,8 +1,8 @@
-package io.github.whdt.routing.query.event.comparison.dto
+package routing.query.event.comparison.dto
 
-import io.github.whdt.core.hdt.model.property.PropertyName
-import io.github.whdt.core.hdt.model.property.PropertyValue
-import io.github.whdt.routing.query.event.comparison.PropertyComparison
+import io.github.ktwinx.core.hdt.model.property.PropertyName
+import io.github.ktwinx.core.hdt.model.property.PropertyValue
+import routing.query.event.comparison.PropertyComparison
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.boolean
 import kotlinx.serialization.json.booleanOrNull

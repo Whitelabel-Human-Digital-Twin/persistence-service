@@ -1,6 +1,6 @@
-package io.github.whdt.routing.query.event.stats
+package routing.query.event.stats
 
-import io.github.whdt.db.property.PropertyObservationService
+import db.property.PropertyObservationService
 import io.ktor.http.HttpStatusCode
 import io.ktor.openapi.jsonSchema
 import io.ktor.server.request.receive

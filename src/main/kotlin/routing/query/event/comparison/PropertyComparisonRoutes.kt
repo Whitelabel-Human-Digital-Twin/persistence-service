@@ -1,9 +1,9 @@
-package io.github.whdt.routing.query.event.comparison
+package routing.query.event.comparison
 
-import io.github.whdt.db.property.PropertyObservationService
-import io.github.whdt.routing.query.event.comparison.dto.PropertiesByComparisonsRequestDto
-import io.github.whdt.routing.query.event.comparison.dto.inferPropertyType
-import io.github.whdt.routing.query.event.comparison.dto.toDomain
+import db.property.PropertyObservationService
+import routing.query.event.comparison.dto.PropertiesByComparisonsRequestDto
+import routing.query.event.comparison.dto.inferPropertyType
+import routing.query.event.comparison.dto.toDomain
 import io.ktor.http.HttpStatusCode
 import io.ktor.openapi.jsonSchema
 import io.ktor.server.request.receive

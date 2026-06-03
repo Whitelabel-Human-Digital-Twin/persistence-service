@@ -1,5 +1,3 @@
-package io.github.whdt
-
 import com.mongodb.client.MongoClients
 import org.junit.jupiter.api.TestInstance
 import org.testcontainers.containers.MongoDBContainer

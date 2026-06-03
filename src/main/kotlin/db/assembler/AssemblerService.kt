@@ -1,21 +1,22 @@
-package io.github.whdt.db.assembler
+package db.assembler
 
-import io.github.whdt.core.hdt.HdtId
-import io.github.whdt.core.hdt.interfaces.digital.DigitalInterface
-import io.github.whdt.core.hdt.interfaces.physical.PhysicalInterface
-import io.github.whdt.core.hdt.model.Format
-import io.github.whdt.core.hdt.model.WellKnownFormats
-import io.github.whdt.core.hdt.model.property.Coding
-import io.github.whdt.core.hdt.model.property.PropertyValue
-import io.github.whdt.core.hdt.storage.Storage
-import io.github.whdt.db.hdt.HdtService
-import io.github.whdt.db.model.ModelService
-import io.github.whdt.db.property.PropertyObservationService
-import io.github.whdt.db.property.PropertyService
-import io.github.whdt.db.util.Err
-import io.github.whdt.db.util.Ok
-import io.github.whdt.db.util.OperationResult
+import io.github.ktwinx.core.hdt.HdtId
+import io.github.ktwinx.core.hdt.interfaces.digital.DigitalInterface
+import io.github.ktwinx.core.hdt.interfaces.physical.PhysicalInterface
+import io.github.ktwinx.core.hdt.model.Format
+import io.github.ktwinx.core.hdt.model.WellKnownFormats
+import io.github.ktwinx.core.hdt.model.property.Coding
+import io.github.ktwinx.core.hdt.model.property.PropertyValue
+import io.github.ktwinx.core.hdt.storage.Storage
+import db.hdt.HdtService
+import db.model.ModelService
+import db.property.PropertyObservationService
+import db.property.PropertyService
+import db.util.Err
+import db.util.Ok
+import db.util.OperationResult
 import kotlinx.serialization.Serializable
+import kotlin.text.get
 import kotlin.time.Instant
 
 @Serializable

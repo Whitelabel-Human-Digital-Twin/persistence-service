@@ -1,15 +1,13 @@
-package io.github.whdt.db.hdt
+package db.hdt
 
 import com.mongodb.client.MongoCollection
 import com.mongodb.client.MongoDatabase
 import com.mongodb.client.model.Filters.eq
 import com.mongodb.client.model.ReplaceOneModel
 import com.mongodb.client.model.ReplaceOptions
-import io.github.whdt.core.hdt.HumanDigitalTwin
-import io.github.whdt.db.util.Err
-import io.github.whdt.db.util.Ok
-import io.github.whdt.db.util.OperationResult
-import io.github.whdt.db.util.runCatchingResult
+import io.github.ktwinx.core.hdt.HumanDigitalTwin
+import db.util.OperationResult
+import db.util.runCatchingResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.bson.Document
@@ -68,7 +66,7 @@ class HdtService(private val database: MongoDatabase) {
     }
 
     suspend fun read(id: String): HumanDigitalTwinDocument? = withContext(Dispatchers.IO) {
-        collection.find(eq("_id", ObjectId(id))).first()?.let(HumanDigitalTwinDocument::fromDocument)
+        collection.find(eq("_id", ObjectId(id))).first()?.let(HumanDigitalTwinDocument.Companion::fromDocument)
     }
 
     suspend fun update(id: String, hdt: HumanDigitalTwin): HumanDigitalTwinDocument? = withContext(Dispatchers.IO) {

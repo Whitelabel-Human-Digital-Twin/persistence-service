@@ -1,8 +1,8 @@
-package io.github.whdt.routing.property
+package routing.property
 
-import io.github.whdt.core.hdt.model.property.PropertyObservation
-import io.github.whdt.db.property.PropertyObservationService
-import io.github.whdt.db.util.getOrRespond
+import io.github.ktwinx.core.hdt.model.property.PropertyObservation
+import db.property.PropertyObservationService
+import db.util.getOrRespond
 import io.ktor.http.HttpStatusCode
 import io.ktor.openapi.jsonSchema
 import io.ktor.server.request.receive

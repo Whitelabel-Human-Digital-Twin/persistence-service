@@ -1,8 +1,8 @@
-package io.github.whdt.routing.hdt
+package routing.hdt
 
-import io.github.whdt.core.hdt.HdtId
-import io.github.whdt.db.model.ModelDocument
-import io.github.whdt.db.model.ModelService
+import io.github.ktwinx.core.hdt.HdtId
+import db.model.ModelDocument
+import db.model.ModelService
 import io.ktor.http.HttpStatusCode
 import io.ktor.openapi.jsonSchema
 import io.ktor.server.response.respond

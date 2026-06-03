@@ -1,7 +1,7 @@
-package io.github.whdt.routing.query.event.comparison
+package routing.query.event.comparison
 
-import io.github.whdt.core.hdt.model.property.PropertyName
-import io.github.whdt.core.hdt.model.property.PropertyValue
+import io.github.ktwinx.core.hdt.model.property.PropertyName
+import io.github.ktwinx.core.hdt.model.property.PropertyValue
 import kotlinx.serialization.Serializable
 
 @Serializable

@@ -1,6 +1,6 @@
-package io.github.whdt.db.hdt
+package db.hdt
 
-import io.github.whdt.core.hdt.HdtId
+import io.github.ktwinx.core.hdt.HdtId
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull

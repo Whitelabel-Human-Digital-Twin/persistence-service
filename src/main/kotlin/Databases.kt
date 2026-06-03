@@ -1,5 +1,3 @@
-package io.github.whdt
-
 import com.mongodb.client.MongoClients
 import com.mongodb.client.MongoDatabase
 import io.ktor.server.application.*

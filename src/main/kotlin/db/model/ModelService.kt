@@ -1,4 +1,4 @@
-package io.github.whdt.db.model
+package db.model
 
 import com.mongodb.client.MongoCollection
 import com.mongodb.client.MongoDatabase
@@ -7,11 +7,11 @@ import com.mongodb.client.model.IndexOptions
 import com.mongodb.client.model.Indexes
 import com.mongodb.client.model.ReplaceOneModel
 import com.mongodb.client.model.ReplaceOptions
-import io.github.whdt.core.hdt.HdtId
-import io.github.whdt.core.hdt.model.Model
-import io.github.whdt.core.hdt.model.ModelName
-import io.github.whdt.db.util.OperationResult
-import io.github.whdt.db.util.runCatchingResult
+import io.github.ktwinx.core.hdt.HdtId
+import io.github.ktwinx.core.hdt.model.Model
+import io.github.ktwinx.core.hdt.model.ModelName
+import db.util.OperationResult
+import db.util.runCatchingResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.bson.Document
@@ -27,14 +27,14 @@ class ModelService(private val database: MongoDatabase) {
     }
 
     suspend fun create(model: Model): ModelDocument = withContext(Dispatchers.IO) {
-        val modelDoc = ModelDocument.fromWhdtModel(model)
+        val modelDoc = ModelDocument.fromktwinxModel(model)
         val doc = modelDoc.toDocument()
         collection.insertOne(doc)
         ModelDocument.fromDocument(doc)
     }
 
     suspend fun insertMany(models: List<Model>): OperationResult<Int> = withContext(Dispatchers.IO) {
-        val docs = models.map { ModelDocument.fromWhdtModel(it) }.map { it.toDocument() }
+        val docs = models.map { ModelDocument.fromktwinxModel(it) }.map { it.toDocument() }
         runCatchingResult {
             val res = collection.insertMany(docs)
             res.insertedIds.size
@@ -44,7 +44,7 @@ class ModelService(private val database: MongoDatabase) {
     suspend fun upsert(model: Model): Boolean = withContext(Dispatchers.IO) {
         val filter = eq("modelId", model.id.value)
         val options = ReplaceOptions().upsert(true)
-        val modelDoc = ModelDocument.fromWhdtModel(model)
+        val modelDoc = ModelDocument.fromktwinxModel(model)
         val doc = modelDoc.toDocument()
         val res = collection.replaceOne(filter, doc,options)
         res.wasAcknowledged()
@@ -52,7 +52,7 @@ class ModelService(private val database: MongoDatabase) {
 
     suspend fun upsertMany(models: List<Model>): OperationResult<Map<String, Int>> = withContext(Dispatchers.IO) {
         val operations = models.map { model ->
-            val doc = ModelDocument.fromWhdtModel(model).toDocument()
+            val doc = ModelDocument.fromktwinxModel(model).toDocument()
             ReplaceOneModel(
                 eq("modelId", model.id.value),
                 doc,

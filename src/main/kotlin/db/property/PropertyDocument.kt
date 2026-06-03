@@ -1,15 +1,15 @@
-package io.github.whdt.db.property
+package db.property
 
-import io.github.whdt.core.hdt.HdtId
-import io.github.whdt.core.hdt.model.ModelId
-import io.github.whdt.core.hdt.model.property.Coding
-import io.github.whdt.core.hdt.model.property.Property
-import io.github.whdt.core.hdt.model.property.PropertyDescription
-import io.github.whdt.core.hdt.model.property.PropertyId
-import io.github.whdt.core.hdt.model.property.PropertyName
-import io.github.whdt.core.hdt.model.property.PropertyValue
-import io.github.whdt.core.hdt.model.property.PropertyValueType
-import io.github.whdt.core.hdt.model.property.toPropertyValue
+import io.github.ktwinx.core.hdt.HdtId
+import io.github.ktwinx.core.hdt.model.ModelId
+import io.github.ktwinx.core.hdt.model.property.Coding
+import io.github.ktwinx.core.hdt.model.property.Property
+import io.github.ktwinx.core.hdt.model.property.PropertyDescription
+import io.github.ktwinx.core.hdt.model.property.PropertyId
+import io.github.ktwinx.core.hdt.model.property.PropertyName
+import io.github.ktwinx.core.hdt.model.property.PropertyValue
+import io.github.ktwinx.core.hdt.model.property.PropertyValueType
+import io.github.ktwinx.core.hdt.model.property.toPropertyValue
 import kotlinx.serialization.Serializable
 import org.bson.Document
 import java.util.Date
@@ -64,7 +64,7 @@ data class PropertyDocument(
     )
 
     companion object {
-        fun fromWhdtProperty(hdtId: HdtId, property: Property): PropertyDocument =
+        fun fromktwinxProperty(hdtId: HdtId, property: Property): PropertyDocument =
             PropertyDocument(
                 hdtId = hdtId,
                 modelId = property.modelId,

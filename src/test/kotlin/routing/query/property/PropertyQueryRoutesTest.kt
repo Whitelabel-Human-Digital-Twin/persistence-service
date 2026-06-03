@@ -1,13 +1,13 @@
-package io.github.whdt.routing.query.property
+package routing.query.property
 
-import io.github.whdt.MongoIntegrationTest
-import io.github.whdt.configureSerialization
-import io.github.whdt.core.hdt.HdtId
-import io.github.whdt.core.hdt.model.ModelId
-import io.github.whdt.core.hdt.model.property.PropertyId
-import io.github.whdt.core.hdt.model.property.PropertyName
-import io.github.whdt.db.property.PropertyDocument
-import io.github.whdt.db.property.PropertyService
+import MongoIntegrationTest
+import configureSerialization
+import io.github.ktwinx.core.hdt.HdtId
+import io.github.ktwinx.core.hdt.model.ModelId
+import io.github.ktwinx.core.hdt.model.property.PropertyId
+import io.github.ktwinx.core.hdt.model.property.PropertyName
+import db.property.PropertyDocument
+import db.property.PropertyService
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText

@@ -23,15 +23,6 @@ kotlin {
 }
 
 repositories {
-    maven {
-        url = uri("https://maven.pkg.github.com/Whitelabel-Human-Digital-Twin/whdt")
-        credentials {
-            username = System.getenv("GPR_USER")
-                ?: providers.gradleProperty("gpr.user").orNull
-            password = System.getenv("GPR_TOKEN")
-                ?: providers.gradleProperty("gpr.key").orNull
-        }
-    }
     mavenCentral()
 }
 
@@ -67,8 +58,8 @@ dependencies {
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.10.0")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 
-    implementation("io.github.whdt:whdt-core:0.9.0")
-    implementation("io.github.whdt:whdt-distributed:0.6.0")
+    implementation("io.github.ktwinx:ktwinx-core:0.9.0")
+    implementation("io.github.ktwinx:ktwinx-distributed:0.9.0")
 }
 
 tasks.withType<Test> {

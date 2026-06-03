@@ -1,4 +1,4 @@
-package io.github.whdt.db.util
+package db.util
 
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.*
