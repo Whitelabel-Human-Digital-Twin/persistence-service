@@ -1,5 +1,3 @@
-package io.github.whdt
-
 import org.bson.Document
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals

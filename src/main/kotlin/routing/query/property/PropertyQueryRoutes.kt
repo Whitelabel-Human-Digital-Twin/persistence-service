@@ -1,8 +1,8 @@
-package io.github.whdt.routing.query.property
+package routing.query.property
 
-import io.github.whdt.core.hdt.query.TagPredicate
-import io.github.whdt.db.property.PropertyDocument
-import io.github.whdt.db.property.PropertyService
+import io.github.ktwinx.core.hdt.query.TagPredicate
+import db.property.PropertyDocument
+import db.property.PropertyService
 import io.ktor.http.HttpStatusCode
 import io.ktor.openapi.jsonSchema
 import io.ktor.server.request.receive

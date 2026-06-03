@@ -1,8 +1,8 @@
-package io.github.whdt.db.view
+package db.view
 
-import io.github.whdt.core.hdt.query.TagPredicate
-import io.github.whdt.core.hdt.view.View
-import io.github.whdt.core.hdt.view.ViewName
+import io.github.ktwinx.core.hdt.query.TagPredicate
+import io.github.ktwinx.core.hdt.view.View
+import io.github.ktwinx.core.hdt.view.ViewName
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull

@@ -1,10 +1,10 @@
-package io.github.whdt.db.hdt
+package db.hdt
 
-import io.github.whdt.core.hdt.HdtId
-import io.github.whdt.core.hdt.HumanDigitalTwin
-import io.github.whdt.core.hdt.interfaces.digital.DigitalInterface
-import io.github.whdt.core.hdt.interfaces.physical.PhysicalInterface
-import io.github.whdt.core.hdt.storage.Storage
+import io.github.ktwinx.core.hdt.HdtId
+import io.github.ktwinx.core.hdt.HumanDigitalTwin
+import io.github.ktwinx.core.hdt.interfaces.digital.DigitalInterface
+import io.github.ktwinx.core.hdt.interfaces.physical.PhysicalInterface
+import io.github.ktwinx.core.hdt.storage.Storage
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import org.bson.Document

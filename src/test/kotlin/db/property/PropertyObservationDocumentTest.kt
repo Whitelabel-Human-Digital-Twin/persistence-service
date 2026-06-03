@@ -1,12 +1,12 @@
-package io.github.whdt.db.property
+package db.property
 
-import io.github.whdt.core.hdt.HdtId
-import io.github.whdt.core.hdt.model.ModelId
-import io.github.whdt.core.hdt.model.ModelName
-import io.github.whdt.core.hdt.model.property.PropertyId
-import io.github.whdt.core.hdt.model.property.PropertyName
-import io.github.whdt.core.hdt.model.property.PropertyObservation
-import io.github.whdt.core.hdt.model.property.PropertyValue
+import io.github.ktwinx.core.hdt.HdtId
+import io.github.ktwinx.core.hdt.model.ModelId
+import io.github.ktwinx.core.hdt.model.ModelName
+import io.github.ktwinx.core.hdt.model.property.PropertyId
+import io.github.ktwinx.core.hdt.model.property.PropertyName
+import io.github.ktwinx.core.hdt.model.property.PropertyObservation
+import io.github.ktwinx.core.hdt.model.property.PropertyValue
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull

@@ -1,12 +1,12 @@
-package io.github.whdt.db.model
+package db.model
 
-import io.github.whdt.core.hdt.HdtId
-import io.github.whdt.core.hdt.model.Format
-import io.github.whdt.core.hdt.model.Model
-import io.github.whdt.core.hdt.model.ModelDescription
-import io.github.whdt.core.hdt.model.ModelId
-import io.github.whdt.core.hdt.model.ModelName
-import io.github.whdt.core.hdt.model.WellKnownFormats
+import io.github.ktwinx.core.hdt.HdtId
+import io.github.ktwinx.core.hdt.model.Format
+import io.github.ktwinx.core.hdt.model.Model
+import io.github.ktwinx.core.hdt.model.ModelDescription
+import io.github.ktwinx.core.hdt.model.ModelId
+import io.github.ktwinx.core.hdt.model.ModelName
+import io.github.ktwinx.core.hdt.model.WellKnownFormats
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import org.bson.Document
@@ -26,7 +26,7 @@ data class ModelDocument(
     fun toDocument(): Document = Document.parse(Json.encodeToString(serializer(), this))
 
     companion object {
-        fun fromWhdtModel(model: Model): ModelDocument = ModelDocument(
+        fun fromktwinxModel(model: Model): ModelDocument = ModelDocument(
             hdtId = model.hdtId,
             modelId = model.id,
             modelName = model.name,

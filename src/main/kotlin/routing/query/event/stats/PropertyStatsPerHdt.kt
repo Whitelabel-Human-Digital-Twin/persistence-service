@@ -1,4 +1,4 @@
-package io.github.whdt.routing.query.event.stats
+package routing.query.event.stats
 
 import kotlinx.serialization.Serializable
 

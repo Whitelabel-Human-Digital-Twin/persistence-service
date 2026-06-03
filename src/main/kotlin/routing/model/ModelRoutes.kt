@@ -1,9 +1,9 @@
-package io.github.whdt.routing.model
+package routing.model
 
-import io.github.whdt.core.hdt.model.Model
-import io.github.whdt.db.model.ModelDocument
-import io.github.whdt.db.model.ModelService
-import io.github.whdt.db.util.getOrRespond
+import io.github.ktwinx.core.hdt.model.Model
+import db.model.ModelDocument
+import db.model.ModelService
+import db.util.getOrRespond
 import io.ktor.http.HttpStatusCode
 import io.ktor.openapi.jsonSchema
 import io.ktor.server.request.receive

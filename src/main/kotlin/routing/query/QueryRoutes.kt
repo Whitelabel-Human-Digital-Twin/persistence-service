@@ -1,11 +1,11 @@
-package io.github.whdt.routing.query
+package routing.query
 
-import io.github.whdt.db.property.PropertyObservationService
-import io.github.whdt.db.property.PropertyService
-import io.github.whdt.routing.query.event.comparison.propertyComparisonRoutes
-import io.github.whdt.routing.query.event.stats.propertyStatsRoutes
-import io.github.whdt.routing.query.event.values.propertyValuesRoutes
-import io.github.whdt.routing.query.property.propertyQueryRoutes
+import db.property.PropertyObservationService
+import db.property.PropertyService
+import routing.query.event.comparison.propertyComparisonRoutes
+import routing.query.event.stats.propertyStatsRoutes
+import routing.query.event.values.propertyValuesRoutes
+import routing.query.property.propertyQueryRoutes
 import io.ktor.server.routing.*
 
 fun Route.queryRoutes(

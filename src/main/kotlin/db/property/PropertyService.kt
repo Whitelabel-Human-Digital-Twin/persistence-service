@@ -1,4 +1,4 @@
-package io.github.whdt.db.property
+package db.property
 
 import com.mongodb.client.MongoCollection
 import com.mongodb.client.MongoDatabase
@@ -8,13 +8,13 @@ import com.mongodb.client.model.IndexOptions
 import com.mongodb.client.model.Indexes
 import com.mongodb.client.model.ReplaceOneModel
 import com.mongodb.client.model.ReplaceOptions
-import io.github.whdt.core.hdt.HdtId
-import io.github.whdt.core.hdt.model.ModelId
-import io.github.whdt.core.hdt.model.property.Property
-import io.github.whdt.core.hdt.query.TagPredicate
-import io.github.whdt.db.query.toBson
-import io.github.whdt.db.util.OperationResult
-import io.github.whdt.db.util.runCatchingResult
+import io.github.ktwinx.core.hdt.HdtId
+import io.github.ktwinx.core.hdt.model.ModelId
+import io.github.ktwinx.core.hdt.model.property.Property
+import io.github.ktwinx.core.hdt.query.TagPredicate
+import db.query.toBson
+import db.util.OperationResult
+import db.util.runCatchingResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.bson.Document
@@ -55,7 +55,7 @@ class PropertyService(private val database: MongoDatabase) {
     suspend fun batchUpsert(hdtId: HdtId, properties: List<Property>): OperationResult<Map<String, Int>> =
         withContext(Dispatchers.IO) {
             val operations = properties.map { property ->
-                val doc = PropertyDocument.fromWhdtProperty(hdtId, property).toDocument()
+                val doc = PropertyDocument.fromktwinxProperty(hdtId, property).toDocument()
                 ReplaceOneModel(
                     and(
                         eq("hdtId", hdtId.id),

@@ -1,11 +1,11 @@
-package io.github.whdt.routing.property
+package routing.property
 
-import io.github.whdt.core.hdt.HdtId
-import io.github.whdt.core.hdt.model.ModelId
-import io.github.whdt.core.hdt.model.property.Property
-import io.github.whdt.db.property.PropertyDocument
-import io.github.whdt.db.property.PropertyService
-import io.github.whdt.db.util.getOrRespond
+import io.github.ktwinx.core.hdt.HdtId
+import io.github.ktwinx.core.hdt.model.ModelId
+import io.github.ktwinx.core.hdt.model.property.Property
+import db.property.PropertyDocument
+import db.property.PropertyService
+import db.util.getOrRespond
 import io.ktor.http.HttpStatusCode
 import io.ktor.openapi.jsonSchema
 import io.ktor.server.request.receive

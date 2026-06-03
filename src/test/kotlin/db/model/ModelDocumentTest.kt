@@ -1,11 +1,11 @@
-package io.github.whdt.db.model
+package db.model
 
-import io.github.whdt.core.hdt.HdtId
-import io.github.whdt.core.hdt.model.ModelDescription
-import io.github.whdt.core.hdt.model.ModelId
-import io.github.whdt.core.hdt.model.ModelName
-import io.github.whdt.core.hdt.model.Format
-import io.github.whdt.core.hdt.model.WellKnownFormats
+import io.github.ktwinx.core.hdt.HdtId
+import io.github.ktwinx.core.hdt.model.ModelDescription
+import io.github.ktwinx.core.hdt.model.ModelId
+import io.github.ktwinx.core.hdt.model.ModelName
+import io.github.ktwinx.core.hdt.model.Format
+import io.github.ktwinx.core.hdt.model.WellKnownFormats
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull

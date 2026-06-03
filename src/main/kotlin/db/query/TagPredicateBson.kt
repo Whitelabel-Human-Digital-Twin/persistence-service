@@ -1,7 +1,7 @@
-package io.github.whdt.db.query
+package db.query
 
 import com.mongodb.client.model.Filters
-import io.github.whdt.core.hdt.query.TagPredicate
+import io.github.ktwinx.core.hdt.query.TagPredicate
 import org.bson.Document
 import org.bson.conversions.Bson
 
@@ -20,7 +20,7 @@ private val MATCH_NONE: Bson = Document("\$expr", Document("\$literal", false))
 
 /**
  * Translates a [TagPredicate] (whdt-core boolean algebra over tags) into a MongoDB [Bson] filter
- * that, applied to a collection of [io.github.whdt.db.property.PropertyDocument]s, returns exactly
+ * that, applied to a collection of [db.property.PropertyDocument]s, returns exactly
  * those whose `tags` map satisfies the predicate.
  *
  * Correctness: for any predicate `p` and any document `d`,

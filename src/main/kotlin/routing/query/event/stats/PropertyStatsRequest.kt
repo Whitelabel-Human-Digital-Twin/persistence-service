@@ -1,9 +1,9 @@
-package io.github.whdt.routing.query.event.stats
+package routing.query.event.stats
 
-import io.github.whdt.core.hdt.HdtId
-import io.github.whdt.core.hdt.model.ModelId
-import io.github.whdt.core.hdt.model.ModelName
-import io.github.whdt.core.hdt.model.property.PropertyName
+import io.github.ktwinx.core.hdt.HdtId
+import io.github.ktwinx.core.hdt.model.ModelId
+import io.github.ktwinx.core.hdt.model.ModelName
+import io.github.ktwinx.core.hdt.model.property.PropertyName
 import kotlinx.serialization.Serializable
 import kotlin.time.Instant
 

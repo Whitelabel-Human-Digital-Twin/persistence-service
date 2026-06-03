@@ -1,12 +1,12 @@
-package io.github.whdt.db.property
+package db.property
 
-import io.github.whdt.core.hdt.HdtId
-import io.github.whdt.core.hdt.model.ModelId
-import io.github.whdt.core.hdt.model.property.Coding
-import io.github.whdt.core.hdt.model.property.Property
-import io.github.whdt.core.hdt.model.property.PropertyDescription
-import io.github.whdt.core.hdt.model.property.PropertyValueType
-import io.github.whdt.core.hdt.model.property.PropertyValue
+import io.github.ktwinx.core.hdt.HdtId
+import io.github.ktwinx.core.hdt.model.ModelId
+import io.github.ktwinx.core.hdt.model.property.Coding
+import io.github.ktwinx.core.hdt.model.property.Property
+import io.github.ktwinx.core.hdt.model.property.PropertyDescription
+import io.github.ktwinx.core.hdt.model.property.PropertyValueType
+import io.github.ktwinx.core.hdt.model.property.PropertyValue
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -20,14 +20,14 @@ class PropertyDocumentToPropertyTest {
         val doc = PropertyDocument(
             hdtId = hdtId,
             modelId = ModelId("model-1"),
-            propertyId = io.github.whdt.core.hdt.model.property.PropertyId("prop-1"),
-            propertyName = io.github.whdt.core.hdt.model.property.PropertyName("temperature"),
+            propertyId = io.github.ktwinx.core.hdt.model.property.PropertyId("prop-1"),
+            propertyName = io.github.ktwinx.core.hdt.model.property.PropertyName("temperature"),
             description = "Ambient temperature",
             declaredType = "DOUBLE",
         )
         val property = doc.toProperty()
         assertEquals(ModelId("model-1"), property.modelId)
-        assertEquals(io.github.whdt.core.hdt.model.property.PropertyName("temperature"), property.name)
+        assertEquals(io.github.ktwinx.core.hdt.model.property.PropertyName("temperature"), property.name)
     }
 
     @Test
@@ -35,8 +35,8 @@ class PropertyDocumentToPropertyTest {
         val doc = PropertyDocument(
             hdtId = hdtId,
             modelId = ModelId("m"),
-            propertyId = io.github.whdt.core.hdt.model.property.PropertyId("p"),
-            propertyName = io.github.whdt.core.hdt.model.property.PropertyName("weight"),
+            propertyId = io.github.ktwinx.core.hdt.model.property.PropertyId("p"),
+            propertyName = io.github.ktwinx.core.hdt.model.property.PropertyName("weight"),
             description = "Body weight in kg",
             declaredType = "FLOAT",
         )
@@ -49,8 +49,8 @@ class PropertyDocumentToPropertyTest {
             val doc = PropertyDocument(
                 hdtId = hdtId,
                 modelId = ModelId("m"),
-                propertyId = io.github.whdt.core.hdt.model.property.PropertyId("p"),
-                propertyName = io.github.whdt.core.hdt.model.property.PropertyName("x"),
+                propertyId = io.github.ktwinx.core.hdt.model.property.PropertyId("p"),
+                propertyName = io.github.ktwinx.core.hdt.model.property.PropertyName("x"),
                 description = "",
                 declaredType = type.name,
             )
@@ -64,8 +64,8 @@ class PropertyDocumentToPropertyTest {
         val doc = PropertyDocument(
             hdtId = hdtId,
             modelId = ModelId("m"),
-            propertyId = io.github.whdt.core.hdt.model.property.PropertyId("p"),
-            propertyName = io.github.whdt.core.hdt.model.property.PropertyName("temp"),
+            propertyId = io.github.ktwinx.core.hdt.model.property.PropertyId("p"),
+            propertyName = io.github.ktwinx.core.hdt.model.property.PropertyName("temp"),
             description = "",
             declaredType = "DOUBLE",
             tags = tags,
@@ -79,8 +79,8 @@ class PropertyDocumentToPropertyTest {
         val doc = PropertyDocument(
             hdtId = hdtId,
             modelId = ModelId("m"),
-            propertyId = io.github.whdt.core.hdt.model.property.PropertyId("p"),
-            propertyName = io.github.whdt.core.hdt.model.property.PropertyName("heartRate"),
+            propertyId = io.github.ktwinx.core.hdt.model.property.PropertyId("p"),
+            propertyName = io.github.ktwinx.core.hdt.model.property.PropertyName("heartRate"),
             description = "",
             declaredType = "INT",
             coding = coding,
@@ -93,8 +93,8 @@ class PropertyDocumentToPropertyTest {
         val doc = PropertyDocument(
             hdtId = hdtId,
             modelId = ModelId("m"),
-            propertyId = io.github.whdt.core.hdt.model.property.PropertyId("p"),
-            propertyName = io.github.whdt.core.hdt.model.property.PropertyName("status"),
+            propertyId = io.github.ktwinx.core.hdt.model.property.PropertyId("p"),
+            propertyName = io.github.ktwinx.core.hdt.model.property.PropertyName("status"),
             description = "Status",
             declaredType = "STRING",
         )
@@ -104,10 +104,10 @@ class PropertyDocumentToPropertyTest {
     }
 
     @Test
-    fun `fromWhdtProperty then toProperty round-trips with non-empty tags and coding`() {
+    fun `fromktwinxProperty then toProperty round-trips with non-empty tags and coding`() {
         val original = Property(
             modelId = ModelId("model-roundtrip"),
-            name = io.github.whdt.core.hdt.model.property.PropertyName("pulse"),
+            name = io.github.ktwinx.core.hdt.model.property.PropertyName("pulse"),
             description = PropertyDescription("Heart pulse rate"),
             declaredType = PropertyValueType.INT,
             initialValue = PropertyValue.IntPropertyValue(72),
@@ -115,7 +115,7 @@ class PropertyDocumentToPropertyTest {
             coding = Coding(system = "http://loinc.org", code = "8867-4"),
         )
 
-        val doc = PropertyDocument.fromWhdtProperty(hdtId, original)
+        val doc = PropertyDocument.fromktwinxProperty(hdtId, original)
         val restored = doc.toProperty()
 
         assertEquals(original.modelId, restored.modelId)

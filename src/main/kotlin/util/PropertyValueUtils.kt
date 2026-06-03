@@ -1,6 +1,6 @@
-package io.github.whdt.util
+package util
 
-import io.github.whdt.core.hdt.model.property.PropertyValue
+import io.github.ktwinx.core.hdt.model.property.PropertyValue
 
 fun PropertyValue.unwrapAndStringify(): String {
     return when (this) {

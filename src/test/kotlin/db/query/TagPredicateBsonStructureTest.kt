@@ -1,7 +1,7 @@
-package io.github.whdt.db.query
+package db.query
 
 import com.mongodb.client.model.Filters
-import io.github.whdt.core.hdt.query.TagPredicate
+import io.github.ktwinx.core.hdt.query.TagPredicate
 import org.bson.Document
 import kotlin.test.Test
 import kotlin.test.assertEquals

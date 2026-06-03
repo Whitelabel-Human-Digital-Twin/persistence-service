@@ -1,9 +1,9 @@
-package io.github.whdt.db.view
+package db.view
 
-import io.github.whdt.MongoIntegrationTest
-import io.github.whdt.core.hdt.query.TagPredicate
-import io.github.whdt.core.hdt.view.View
-import io.github.whdt.core.hdt.view.ViewName
+import MongoIntegrationTest
+import io.github.ktwinx.core.hdt.query.TagPredicate
+import io.github.ktwinx.core.hdt.view.View
+import io.github.ktwinx.core.hdt.view.ViewName
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test

@@ -1,10 +1,10 @@
-package io.github.whdt.routing.query.event.comparison
+package routing.query.event.comparison
 
-import io.github.whdt.core.hdt.HdtId
-import io.github.whdt.core.hdt.model.ModelName
-import io.github.whdt.core.hdt.model.property.PropertyName
-import io.github.whdt.core.hdt.model.property.PropertyValue
-import io.github.whdt.core.hdt.model.property.toPropertyValue
+import io.github.ktwinx.core.hdt.HdtId
+import io.github.ktwinx.core.hdt.model.ModelName
+import io.github.ktwinx.core.hdt.model.property.PropertyName
+import io.github.ktwinx.core.hdt.model.property.PropertyValue
+import io.github.ktwinx.core.hdt.model.property.toPropertyValue
 import kotlinx.serialization.Serializable
 import org.bson.Document
 import kotlin.time.Instant

@@ -1,10 +1,10 @@
-package io.github.whdt.routing.hdt
+package routing.hdt
 
-import io.github.whdt.core.hdt.HdtId
-import io.github.whdt.db.assembler.AssemblerService
-import io.github.whdt.db.assembler.HdtSpecResponse
-import io.github.whdt.db.assembler.PropertySnapshotEntry
-import io.github.whdt.db.util.getOrRespond
+import io.github.ktwinx.core.hdt.HdtId
+import db.assembler.AssemblerService
+import db.assembler.HdtSpecResponse
+import db.assembler.PropertySnapshotEntry
+import db.util.getOrRespond
 import io.ktor.http.HttpStatusCode
 import io.ktor.openapi.jsonSchema
 import io.ktor.server.response.respond
