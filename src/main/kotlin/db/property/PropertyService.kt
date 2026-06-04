@@ -23,7 +23,10 @@ class PropertyService(private val database: MongoDatabase) {
     var collection: MongoCollection<Document>
 
     init {
-        database.createCollection("properties")
+        val exists = database.listCollectionNames().contains("properties")
+        if(!exists) {
+            database.createCollection("properties")
+        }
         collection = database.getCollection("properties")
         collection.createIndex(
             Indexes.ascending("hdtId", "modelId", "propertyId"),

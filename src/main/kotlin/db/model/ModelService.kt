@@ -21,7 +21,10 @@ class ModelService(private val database: MongoDatabase) {
     var collection: MongoCollection<Document>
 
     init {
-        database.createCollection("models")
+        val exists = database.listCollectionNames().contains("models")
+        if (!exists) {
+            database.createCollection("models")
+        }
         collection = database.getCollection("models")
         collection.createIndex(Indexes.ascending("modelId"), IndexOptions().unique(true))
     }

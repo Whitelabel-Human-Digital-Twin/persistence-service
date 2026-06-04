@@ -17,7 +17,10 @@ class HdtService(private val database: MongoDatabase) {
     var collection: MongoCollection<Document>
 
     init {
-        database.createCollection("hdt")
+        val exists = database.listCollectionNames().contains("hdt")
+        if(!exists) {
+            database.createCollection("hdt")
+        }
         collection = database.getCollection("hdt")
     }
 

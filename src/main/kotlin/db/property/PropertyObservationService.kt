@@ -5,13 +5,12 @@ import com.mongodb.client.MongoDatabase
 import com.mongodb.client.model.*
 import com.mongodb.client.model.Accumulators.addToSet
 import com.mongodb.client.model.Accumulators.push
-import com.mongodb.client.model.Aggregates.group
-import com.mongodb.client.model.Aggregates.match
-import com.mongodb.client.model.Aggregates.sort
+import com.mongodb.client.model.Aggregates.*
 import com.mongodb.client.model.Filters.*
 import com.mongodb.client.model.Projections.fields
 import com.mongodb.client.model.Projections.include
-import db.property.PropertyObservationDocument
+import db.util.OperationResult
+import db.util.runCatchingResult
 import io.github.ktwinx.core.hdt.HdtId
 import io.github.ktwinx.core.hdt.model.ModelId
 import io.github.ktwinx.core.hdt.model.ModelName
@@ -19,30 +18,30 @@ import io.github.ktwinx.core.hdt.model.property.PropertyId
 import io.github.ktwinx.core.hdt.model.property.PropertyName
 import io.github.ktwinx.core.hdt.model.property.PropertyObservation
 import io.github.ktwinx.core.hdt.model.property.PropertyValue
-import db.util.OperationResult
-import db.util.runCatchingResult
-import routing.query.event.comparison.ComparisonOperator
-import routing.query.event.comparison.Comparison
-import routing.query.event.comparison.PropertyComparison
-import routing.query.event.stats.PropertyStatsPerHdt
-import routing.query.event.comparison.PropertiesByComparisonsAggregateResponse
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.bson.Document
 import org.bson.conversions.Bson
+import routing.query.event.comparison.Comparison
+import routing.query.event.comparison.ComparisonOperator
+import routing.query.event.comparison.PropertiesByComparisonsAggregateResponse
+import routing.query.event.comparison.PropertyComparison
+import routing.query.event.stats.PropertyStatsPerHdt
 import java.time.Instant
 import java.util.*
-import kotlin.collections.mutableListOf
 
 class PropertyObservationService(val db: MongoDatabase) {
     var collection: MongoCollection<Document>
 
     init {
-        val tsOptions = TimeSeriesOptions("timeField")
-            .metaField("metaField")
-            .granularity(TimeSeriesGranularity.SECONDS)
-        val ccOptions = CreateCollectionOptions().timeSeriesOptions(tsOptions)
-        db.createCollection("observations", ccOptions)
+        val exists = db.listCollectionNames().contains("observations")
+        if (!exists) {
+            val tsOptions = TimeSeriesOptions("timeField")
+                .metaField("metaField")
+                .granularity(TimeSeriesGranularity.SECONDS)
+            val ccOptions = CreateCollectionOptions().timeSeriesOptions(tsOptions)
+            db.createCollection("observations", ccOptions)
+        }
         collection = db.getCollection("observations")
     }
 
