@@ -16,6 +16,6 @@ COPY --from=builder /build/build/libs/*-all.jar app.jar
 
 EXPOSE 8081
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-  CMD wget --quiet --tries=1 --spider http://localhost:8081/health || exit 1
+  CMD wget --quiet --tries=1 -O /dev/null http://localhost:8081/health || exit 1
 
 ENTRYPOINT ["java", "-jar", "app.jar"]
