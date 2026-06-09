@@ -55,6 +55,17 @@ class PropertyService(private val database: MongoDatabase) {
             collection.find(predicate.toBson()).toList().mapNotNull(PropertyDocument::fromDocument)
         }
 
+    suspend fun batchInsert(hdtId: HdtId, properties: List<Property>): OperationResult<Int> =
+        withContext(Dispatchers.IO) {
+            runCatchingResult {
+                val res = collection.insertMany(properties.map {
+                    PropertyDocument.fromktwinxProperty(hdtId, it)
+                        .toDocument()
+                })
+                res.insertedIds.size
+            }
+        }
+
     suspend fun batchUpsert(hdtId: HdtId, properties: List<Property>): OperationResult<Map<String, Int>> =
         withContext(Dispatchers.IO) {
             val operations = properties.map { property ->

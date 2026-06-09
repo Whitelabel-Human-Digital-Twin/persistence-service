@@ -35,6 +35,24 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/HumanDigitalTwinDocument'
+    put:
+      operationId: hdts/put
+      summary: Create or Update HDT
+      description: Creates a new Human Digital Twin or updates an existing one
+      requestBody:
+        description: The Representation of a Human Digital Twin
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/human-digital-twin'
+        required: true
+      responses:
+        '200':
+          description: HumanDigitalTwin created or updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HumanDigitalTwinDocument'
   /hdts/{id}:
     put:
       operationId: hdts/{id}/update
@@ -118,9 +136,9 @@ paths:
                   $ref: '#/components/schemas/ModelDocument'
         '404':
           description: Human Digital Twin not found
-  /hdts/{id}/events:
+  /hdts/{id}/observations:
     get:
-      operationId: hdts/{id}/events
+      operationId: hdts/{id}/observations
       summary: Get HDT's [Observations]
       description: Get all Observations of the specified HDT
       parameters:
@@ -306,14 +324,14 @@ paths:
           description: Created Successfully
         '500':
           description: Failed to create Models
-  /properties:
+  /hdts/{id}/properties:
     get:
       operationId: properties/get
       summary: List Property specs
-      description: Return property specs filtered by hdtId and optional modelId
+      description: Return property specs for the specified HDT, optionally filtered by modelId
       parameters:
-      - name: hdtId
-        in: query
+      - name: id
+        in: path
         required: true
         schema:
           type: string
@@ -332,15 +350,15 @@ paths:
                 items:
                   $ref: '#/components/schemas/PropertyDocument'
         '400':
-          description: Missing hdtId query parameter
-  /properties/batch:
+          description: Missing HDT id
+  /hdts/{id}/properties/batch:
     post:
       operationId: properties/batch/upsert
       summary: Batch upsert Property specs
-      description: Insert or update a list of Property specs for a given HDT
+      description: Insert or update a list of Property specs for the specified HDT
       parameters:
-      - name: hdtId
-        in: query
+      - name: id
+        in: path
         required: true
         schema:
           type: string
@@ -357,7 +375,7 @@ paths:
         '201':
           description: Property specs upserted successfully
         '400':
-          description: Missing hdtId query parameter
+          description: Missing HDT id
         '500':
           description: Failed to upsert property specs
   /observations/batch:
