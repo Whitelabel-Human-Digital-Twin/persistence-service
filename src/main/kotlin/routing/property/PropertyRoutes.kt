@@ -18,13 +18,13 @@ import io.ktor.server.routing.route
 import io.ktor.utils.io.ExperimentalKtorApi
 
 @OptIn(ExperimentalKtorApi::class)
-fun Route.propertyRoutes(
+fun Route.propertySpecRoutes(
     propertyService: PropertyService,
 ) {
     route("/properties") {
         get {
-            val hdtId = call.request.queryParameters["hdtId"]
-                ?: return@get call.respond(HttpStatusCode.BadRequest, "Missing required query parameter: hdtId")
+            val hdtId = call.parameters["id"]
+                ?: return@get call.respond(HttpStatusCode.BadRequest, "Missing HDT id")
             val modelId = call.request.queryParameters["modelId"]
             val results = propertyService.findByHdtId(
                 HdtId(hdtId),
@@ -34,7 +34,7 @@ fun Route.propertyRoutes(
         }.describe {
             operationId = "properties/get"
             summary = "List Property specs"
-            description = "Return property specs filtered by hdtId and optional modelId"
+            description = "Return property specs for the specified HDT, optionally filtered by modelId"
 
             responses {
                 HttpStatusCode.OK {
@@ -42,15 +42,15 @@ fun Route.propertyRoutes(
                     schema = jsonSchema<List<PropertyDocument>>()
                 }
                 HttpStatusCode.BadRequest {
-                    description = "Missing hdtId query parameter"
+                    description = "Missing HDT id"
                 }
             }
         }
 
         route("/batch") {
             post {
-                val hdtIdParam = call.request.queryParameters["hdtId"]
-                    ?: return@post call.respond(HttpStatusCode.BadRequest, "Missing required query parameter: hdtId")
+                val hdtIdParam = call.parameters["id"]
+                    ?: return@post call.respond(HttpStatusCode.BadRequest, "Missing HDT id")
                 val properties = call.receive<List<Property>>()
                 propertyService.batchUpsert(HdtId(hdtIdParam), properties)
                     .getOrRespond(call) {
@@ -60,7 +60,7 @@ fun Route.propertyRoutes(
             }.describe {
                 operationId = "properties/batch/upsert"
                 summary = "Batch upsert Property specs"
-                description = "Insert or update a list of Property specs for a given HDT"
+                description = "Insert or update a list of Property specs for the specified HDT"
 
                 requestBody {
                     description = "List of Property specs"
@@ -72,7 +72,7 @@ fun Route.propertyRoutes(
                         description = "Property specs upserted successfully"
                     }
                     HttpStatusCode.BadRequest {
-                        description = "Missing hdtId query parameter"
+                        description = "Missing HDT id"
                     }
                     HttpStatusCode.InternalServerError {
                         description = "Failed to upsert property specs"

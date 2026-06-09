@@ -7,7 +7,6 @@ import db.view.ViewService
 import routing.hdt.humanDigitalTwinRoutes
 import routing.model.modelsRoutes
 import routing.property.observationRoutes
-import routing.property.propertyRoutes
 import routing.query.queryRoutes
 import routing.view.viewRoutes
 import io.ktor.http.*
@@ -66,7 +65,6 @@ fun Application.configureRouting() {
         humanDigitalTwinRoutes(hdtService, modelService, propertyObservationService, propertyService, assemblerService)
         modelsRoutes(modelService)
         observationRoutes(propertyObservationService)
-        propertyRoutes(propertyService)
         queryRoutes(propertyObservationService, propertyService)
         viewRoutes(viewService, hdtService, propertyService)
     }
