@@ -57,6 +57,7 @@ class PropertyService(private val database: MongoDatabase) {
 
     suspend fun batchInsert(hdtId: HdtId, properties: List<Property>): OperationResult<Int> =
         withContext(Dispatchers.IO) {
+            if (properties.isEmpty()) return@withContext db.util.Ok(0)
             runCatchingResult {
                 val res = collection.insertMany(properties.map {
                     PropertyDocument.fromktwinxProperty(hdtId, it)
