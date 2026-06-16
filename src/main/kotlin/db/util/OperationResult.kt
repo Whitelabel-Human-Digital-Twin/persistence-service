@@ -69,13 +69,13 @@ inline fun <T> runCatchingResult(block: () -> T): OperationResult<T> =
 suspend inline fun <T> OperationResult<T>.getOrRespond(
     call: ApplicationCall,
     onError: suspend (Err) -> Unit
-): T? {
-    return when (this) {
-        is Ok -> result
-        is Err -> {
-            onError(this)
-            null
-        }
+): T? = when (this) {
+    is Ok -> result
+    is Err -> {
+        if (cause != null) call.application.log.error("Operation failed: $message", cause)
+        else call.application.log.error("Operation failed: $message")
+        onError(this)
+        null
     }
 }
 
@@ -119,24 +119,9 @@ suspend inline fun <T> OperationResult<T>.andThen(
     when (this) {
         is Ok -> onSuccess(result)
         is Err -> {
+            if (cause != null) call.application.log.error("Operation failed: $message", cause)
+            else call.application.log.error("Operation failed: $message")
             call.respond(HttpStatusCode.InternalServerError, message)
         }
     }
 }
-
-/**
- * Aggregates a successful [OperationResult] containing a list of integers into their sum.
- *
- * - If this is [Ok], returns a new [Ok] with the sum of the list.
- * - If this is [Err], propagates the error unchanged.
- *
- * This is commonly used after [sequenceResults] when each operation returns an integer
- * (e.g., number of inserted records) and a total is desired.
- *
- * @return An [OperationResult] containing the sum or the original error.
- */
-fun OperationResult<List<Int>>.sum(): OperationResult<Int> =
-    when (this) {
-        is Ok -> Ok(result.sum())
-        is Err -> this
-    }
