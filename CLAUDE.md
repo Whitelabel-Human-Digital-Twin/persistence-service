@@ -31,8 +31,7 @@ Credentials are injected via environment variables:
 MONGO_DB_NAME    # database name
 MONGO_USER       # MongoDB username
 MONGO_PASSWORD   # MongoDB password
-GPR_USER         # GitHub Package Registry username (for WHDT dependencies)
-GPR_TOKEN        # GitHub Package Registry token
+MONGO_URI        # MongoDB uri
 ```
 
 ## Architecture
@@ -58,7 +57,7 @@ All database calls are `suspend` functions wrapped in `withContext(Dispatchers.I
 
 ### MongoDB Specifics
 
-- **Time-series collection** (`property_events`) — uses MongoDB time-series with a meta field for HDT/model/property metadata and a time field for timestamps. Queried via aggregation pipelines.
+- **Time-series collection** (`observations`) — uses MongoDB time-series with a meta field for HDT/model/property metadata and a time field for timestamps. Queried via aggregation pipelines.
 - **Bulk operations** — HDTs, models, and property events all support batch insert/upsert via `bulkWrite()`.
 - **No transactions** — cross-collection consistency (e.g., inserting an HDT alongside its models) relies on sequential writes, not MongoDB multi-document transactions.
 
@@ -66,9 +65,9 @@ All database calls are `suspend` functions wrapped in `withContext(Dispatchers.I
 
 `PropertyValue` is a sealed class (Int, Long, Float, Double, String, Boolean, Empty). Use `Any.pv()` to convert raw values and `PropertyValue.toBsonValue()` / `unwrapAndStringify()` when writing to or reading from BSON.
 
-### OpenAPI
-
-All routes must use the `.describe { }` DSL to document request/response shapes. The spec is auto-generated to `openapi/openapi.yaml` and served at `/swaggerUI`.
+### OpenApI
+All routes used the `.describe { }` DSL to document request/response shapes. This is now deprecated due to issues with the Ktor swagger component. All edits/additions/deletions to routes need to be followed by a manual edit of the `openapi/openapi.yaml` file.
+The spec is served at `/swaggerUI`.
 
 ## WHDT Dependency Updates
 
