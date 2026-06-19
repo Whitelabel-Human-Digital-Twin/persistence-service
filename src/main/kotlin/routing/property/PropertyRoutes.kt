@@ -11,9 +11,11 @@ import io.ktor.openapi.jsonSchema
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
+import io.github.ktwinx.core.hdt.model.property.PropertyId
 import io.ktor.server.routing.get
 import io.ktor.server.routing.openapi.describe
 import io.ktor.server.routing.post
+import io.ktor.server.routing.put
 import io.ktor.server.routing.route
 import io.ktor.utils.io.ExperimentalKtorApi
 
@@ -44,6 +46,22 @@ fun Route.propertySpecRoutes(
                 HttpStatusCode.BadRequest {
                     description = "Missing HDT id"
                 }
+            }
+        }
+
+        route("/{propertyId}/tags") {
+            put {
+                val hdtId = call.parameters["id"]
+                    ?: return@put call.respond(HttpStatusCode.BadRequest, "Missing HDT id")
+                val propertyId = call.parameters["propertyId"]
+                    ?: return@put call.respond(HttpStatusCode.BadRequest, "Missing propertyId")
+                val tags = call.receive<Map<String, String>>()
+                val matched = propertyService
+                    .replaceTags(HdtId(hdtId), PropertyId(propertyId), tags)
+                    .getOrRespond(call) { call.respond(HttpStatusCode.InternalServerError, it.message) }
+                    ?: return@put
+                if (matched) call.respond(HttpStatusCode.OK, tags)
+                else call.respond(HttpStatusCode.NotFound, "Property not found: $propertyId")
             }
         }
 

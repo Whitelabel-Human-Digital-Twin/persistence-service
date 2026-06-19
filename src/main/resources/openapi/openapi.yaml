@@ -378,6 +378,47 @@ paths:
           description: Missing HDT id
         '500':
           description: Failed to upsert property specs
+  /hdts/{id}/properties/{propertyId}/tags:
+    put:
+      summary: Replace Property tags
+      description: >-
+        Replaces the entire tag map of a single Property spec. The request body is
+        the complete desired tag map; an empty object clears all tags.
+      operationId: properties/{propertyId}/tags/put
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: propertyId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties:
+                type: string
+      responses:
+        '200':
+          description: Tags replaced; returns the new tag map
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: string
+        '400':
+          description: Missing path parameter
+        '404':
+          description: Property not found
+        '500':
+          description: Failed to update tags
   /observations/batch:
     post:
       operationId: observations/batch/insert
