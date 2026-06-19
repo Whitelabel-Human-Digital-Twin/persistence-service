@@ -8,9 +8,11 @@ import com.mongodb.client.model.IndexOptions
 import com.mongodb.client.model.Indexes
 import com.mongodb.client.model.ReplaceOneModel
 import com.mongodb.client.model.ReplaceOptions
+import com.mongodb.client.model.Updates
 import io.github.ktwinx.core.hdt.HdtId
 import io.github.ktwinx.core.hdt.model.ModelId
 import io.github.ktwinx.core.hdt.model.property.Property
+import io.github.ktwinx.core.hdt.model.property.PropertyId
 import io.github.ktwinx.core.hdt.query.TagPredicate
 import db.query.toBson
 import db.util.OperationResult
@@ -18,6 +20,9 @@ import db.util.runCatchingResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.bson.Document
+import java.util.Date
+import kotlin.time.Clock
+import kotlin.time.toJavaInstant
 
 class PropertyService(private val database: MongoDatabase) {
     var collection: MongoCollection<Document>
@@ -54,6 +59,23 @@ class PropertyService(private val database: MongoDatabase) {
         withContext(Dispatchers.IO) {
             collection.find(predicate.toBson()).toList().mapNotNull(PropertyDocument::fromDocument)
         }
+
+    suspend fun replaceTags(
+        hdtId: HdtId,
+        propertyId: PropertyId,
+        tags: Map<String, String>,
+    ): OperationResult<Boolean> = withContext(Dispatchers.IO) {
+        runCatchingResult {
+            val res = collection.updateOne(
+                and(eq("hdtId", hdtId.id), eq("propertyId", propertyId.value)),
+                Updates.combine(
+                    Updates.set("tags", Document(tags)),
+                    Updates.set("lastUpdated", Date.from(Clock.System.now().toJavaInstant())),
+                ),
+            )
+            res.matchedCount > 0
+        }
+    }
 
     suspend fun batchInsert(hdtId: HdtId, properties: List<Property>): OperationResult<Int> =
         withContext(Dispatchers.IO) {
