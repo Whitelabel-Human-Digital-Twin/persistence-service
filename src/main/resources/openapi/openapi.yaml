@@ -180,6 +180,31 @@ paths:
           description: Missing HDT id
         '500':
           description: HDT or associated data not found
+  /hdts/{id}/snapshot/by-task:
+    get:
+      operationId: hdts/snapshot/by-task
+      summary: By-task property snapshot
+      description: >-
+        Latest observed value per (property, task) for the specified HDT. A property
+        appears under each task in which it was observed. 'task' is null for
+        observations recorded without a task.
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: By-task snapshot entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TaskPropertySnapshotEntry'
+        '400':
+          description: Missing HDT id
   /hdts/{id}/snapshot:
     get:
       operationId: hdts/{id}/snapshot
@@ -1397,6 +1422,31 @@ components:
           enum:
           - observation
           - initial_value
+    TaskPropertySnapshotEntry:
+      type: object
+      title: io.github.whdt.db.assembler.TaskPropertySnapshotEntry
+      required:
+      - propertyId
+      - propertyName
+      - modelName
+      - value
+      - timestamp
+      properties:
+        task:
+          type:
+          - string
+          - 'null'
+        propertyId:
+          type: string
+        propertyName:
+          type: string
+        modelName:
+          type: string
+        value:
+          $ref: '#/components/schemas/PropertyValue'
+        timestamp:
+          type: string
+          format: date-time
     PropertyValuesRequest:
       type: object
       title: io.github.whdt.routing.query.event.values.PropertyValuesRequest

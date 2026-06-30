@@ -4,6 +4,7 @@ import io.github.ktwinx.core.hdt.HdtId
 import db.assembler.AssemblerService
 import db.assembler.HdtSpecResponse
 import db.assembler.PropertySnapshotEntry
+import db.assembler.TaskPropertySnapshotEntry
 import db.util.getOrRespond
 import io.ktor.http.HttpStatusCode
 import io.ktor.openapi.jsonSchema
@@ -38,6 +39,28 @@ fun Route.hdtAssemblerRoutes(
             }
             HttpStatusCode.InternalServerError {
                 description = "HDT or associated data not found"
+            }
+        }
+    }
+
+    get("/snapshot/by-task") {
+        val hdtId = call.parameters["id"]
+            ?: return@get call.respond(HttpStatusCode.BadRequest, "Missing HDT id")
+        assemblerService.getSnapshotByTask(HdtId(hdtId)).getOrRespond(call) {
+            call.respond(HttpStatusCode.InternalServerError, it.message)
+        }?.let { call.respond(HttpStatusCode.OK, it) }
+    }.describe {
+        operationId = "hdts/{id}/snapshot/by-task"
+        summary = "By-task property snapshot"
+        description = "Latest observed value per (property, task) for the specified HDT. 'task' is null for observations recorded without a task."
+
+        responses {
+            HttpStatusCode.OK {
+                description = "By-task snapshot entries"
+                schema = jsonSchema<List<TaskPropertySnapshotEntry>>()
+            }
+            HttpStatusCode.BadRequest {
+                description = "Missing HDT id"
             }
         }
     }
