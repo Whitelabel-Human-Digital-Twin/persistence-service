@@ -162,6 +162,30 @@ class PropertyObservationService(val db: MongoDatabase) {
             .toMap()
     }
 
+    data class LatestByTask(val task: String?, val observation: PropertyObservationDocument)
+
+    suspend fun latestPerPropertyAndTask(
+        hdtId: HdtId
+    ): List<LatestByTask> = withContext(Dispatchers.IO) {
+        val filter = baseMatch(hdtId = hdtId.id)
+        val idDoc = Document("propertyId", "\$metaField.propertyId")
+            .append("task", "\$metadata.task")
+        val pipeline = listOf(
+            match(filter),
+            sort(Sorts.descending("timeField")),
+            group(idDoc, Accumulators.first("doc", "\$\$ROOT"))
+        )
+        collection.aggregate(pipeline)
+            .mapNotNull { doc ->
+                val id = doc.get("_id", Document::class.java) ?: return@mapNotNull null
+                val task = id.getString("task")
+                val inner = doc.get("doc", Document::class.java) ?: return@mapNotNull null
+                val obs = PropertyObservationDocument.fromDocument(inner) ?: return@mapNotNull null
+                LatestByTask(task, obs)
+            }
+            .toList()
+    }
+
     suspend fun propertyAggregateStats(
         hdtIds: List<HdtId>,
         modelIds: List<ModelId>,

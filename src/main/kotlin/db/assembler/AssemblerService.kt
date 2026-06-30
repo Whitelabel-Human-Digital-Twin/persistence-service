@@ -58,6 +58,16 @@ data class PropertySnapshotEntry(
     val source: String,
 )
 
+@Serializable
+data class TaskPropertySnapshotEntry(
+    val task: String?,
+    val propertyId: String,
+    val propertyName: String,
+    val modelName: String,
+    val value: PropertyValue,
+    val timestamp: Instant,
+)
+
 class AssemblerService(
     private val hdtService: HdtService,
     private val modelService: ModelService,
@@ -103,6 +113,21 @@ class AssemblerService(
                 tags = hdt.tags,
             )
         )
+    }
+
+    suspend fun getSnapshotByTask(hdtId: HdtId): OperationResult<List<TaskPropertySnapshotEntry>> {
+        val latest = observationService.latestPerPropertyAndTask(hdtId)
+        val entries = latest.map { (task, obs) ->
+            TaskPropertySnapshotEntry(
+                task = task,
+                propertyId = obs.metaField.propertyId.value,
+                propertyName = obs.metaField.propertyName.value,
+                modelName = obs.metaField.modelName.value,
+                value = obs.value,
+                timestamp = obs.timeField,
+            )
+        }
+        return Ok(entries)
     }
 
     suspend fun getSnapshot(hdtId: HdtId): OperationResult<List<PropertySnapshotEntry>> {
