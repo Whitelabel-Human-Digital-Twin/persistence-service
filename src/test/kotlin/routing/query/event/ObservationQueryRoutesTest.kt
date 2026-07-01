@@ -139,5 +139,11 @@ class ObservationQueryRoutesTest : MongoIntegrationTest() {
             setBody("""{"comparisons":[{"propertyName":"temperature","comparison":"GTE","value":36.0}],"modelNames":null}""")
         }
         assertEquals(HttpStatusCode.OK, response.status)
+        val body = response.bodyAsText()
+        assertTrue(body.contains("\"populationStats\""), "Response should contain populationStats")
+        assertTrue(body.contains("\"temperature\""), "populationStats should include the temperature property")
+        assertTrue(body.contains("\"median\""), "populationStats entries should include median")
+        assertTrue(body.contains("\"p25\""), "populationStats entries should include p25")
+        assertTrue(body.contains("\"p75\""), "populationStats entries should include p75")
     }
 }
