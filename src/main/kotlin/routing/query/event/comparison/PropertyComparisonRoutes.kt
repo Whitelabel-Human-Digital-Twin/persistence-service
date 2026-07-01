@@ -42,7 +42,7 @@ fun Route.propertyComparisonRoutes(
 
             responses {
                 HttpStatusCode.OK {
-                    schema = jsonSchema<PropertiesByComparisonsAggregateResponse>()
+                    schema = jsonSchema<ComparisonSearchResult>()
                 }
             }
         }

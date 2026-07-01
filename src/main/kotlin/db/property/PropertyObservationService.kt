@@ -9,6 +9,7 @@ import com.mongodb.client.model.Aggregates.*
 import com.mongodb.client.model.Filters.*
 import com.mongodb.client.model.Projections.fields
 import com.mongodb.client.model.Projections.include
+import com.mongodb.client.model.QuantileMethod
 import db.util.OperationResult
 import db.util.runCatchingResult
 import io.github.ktwinx.core.hdt.HdtId
@@ -24,8 +25,10 @@ import org.bson.Document
 import org.bson.conversions.Bson
 import routing.query.event.comparison.Comparison
 import routing.query.event.comparison.ComparisonOperator
+import routing.query.event.comparison.ComparisonSearchResult
 import routing.query.event.comparison.PropertiesByComparisonsAggregateResponse
 import routing.query.event.comparison.PropertyComparison
+import routing.query.event.comparison.PropertyPopulationStats
 import routing.query.event.stats.PropertyStatsPerHdt
 import java.time.Instant
 import java.util.*
@@ -269,7 +272,7 @@ class PropertyObservationService(val db: MongoDatabase) {
         modelNames: List<ModelName>? = null,
         from: Instant? = null,
         to: Instant? = null
-    ): List<PropertiesByComparisonsAggregateResponse> = withContext(Dispatchers.IO) {
+    ): ComparisonSearchResult = withContext(Dispatchers.IO) {
         fun buildPropertyComparisonFilter(pc: PropertyComparison): Bson =
             and(
                 eq("metaField.propertyName", pc.propertyName.value),
@@ -298,11 +301,42 @@ class PropertyObservationService(val db: MongoDatabase) {
             ),
             match(all("matchedProperties", propertyNames))
         )
-        collection.aggregate(pipeline)
+        val matches = collection.aggregate(pipeline)
             .mapNotNull {
                PropertiesByComparisonsAggregateResponse.fromDocument(it)
            }
            .toList()
            .sortedBy { it.hdtId.id }
+
+        val matchedHdtIds = matches.map { it.hdtId.id }
+        val populationStats = if (matchedHdtIds.isEmpty()) {
+            emptyList()
+        } else {
+            val populationFilters = mutableListOf<Bson>(
+                `in`("metaField.hdtId", matchedHdtIds),
+                `in`("metaField.propertyName", propertyNames),
+            )
+            populationFilters += baseMatch(from = from, to = to)
+            if (!modelNames.isNullOrEmpty())
+                populationFilters += `in`("metaField.modelName", modelNames.map { it.value })
+
+            val populationPipeline = listOf(
+                match(and(populationFilters)),
+                group(
+                    "\$metaField.propertyName",
+                    Accumulators.sum("count", 1),
+                    Accumulators.avg("avg", "\$value"),
+                    Accumulators.min("min", "\$value"),
+                    Accumulators.max("max", "\$value"),
+                    Accumulators.percentile("pct", "\$value", listOf(0.25, 0.5, 0.75), QuantileMethod.approximate())
+                )
+            )
+            collection.aggregate(populationPipeline)
+                .mapNotNull { PropertyPopulationStats.fromDocument(it) }
+                .toList()
+                .sortedBy { it.propertyName.value }
+        }
+
+        ComparisonSearchResult(matches = matches, populationStats = populationStats)
     }
 }

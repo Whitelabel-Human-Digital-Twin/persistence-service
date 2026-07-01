@@ -60,3 +60,38 @@ data class PropertiesByComparisonsAggregateResponse(
         }
     }
 }
+
+@Serializable
+data class PropertyPopulationStats(
+    val propertyName: PropertyName,
+    val count: Long,
+    val avg: Double?,
+    val min: Double?,
+    val max: Double?,
+    val median: Double?,
+    val p25: Double?,
+    val p75: Double?,
+) {
+    companion object {
+        fun fromDocument(doc: Document): PropertyPopulationStats? {
+            val propertyName = doc.getString("_id") ?: return null
+            val percentiles = doc.getList("pct", Number::class.java).orEmpty()
+            return PropertyPopulationStats(
+                propertyName = PropertyName(propertyName),
+                count = (doc["count"] as Number).toLong(),
+                avg = (doc["avg"] as? Number)?.toDouble(),
+                min = (doc["min"] as? Number)?.toDouble(),
+                max = (doc["max"] as? Number)?.toDouble(),
+                p25 = percentiles.getOrNull(0)?.toDouble(),
+                median = percentiles.getOrNull(1)?.toDouble(),
+                p75 = percentiles.getOrNull(2)?.toDouble(),
+            )
+        }
+    }
+}
+
+@Serializable
+data class ComparisonSearchResult(
+    val matches: List<PropertiesByComparisonsAggregateResponse>,
+    val populationStats: List<PropertyPopulationStats>,
+)
