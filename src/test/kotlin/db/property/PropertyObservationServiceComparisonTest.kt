@@ -62,6 +62,7 @@ class PropertyObservationServiceComparisonTest : MongoIntegrationTest() {
             observation("hdt-pop-c", "heartRate", 65.0, 0),
         )
         service.insertMany(observations)
+        Unit
     }
 
     @Test
@@ -106,5 +107,6 @@ class PropertyObservationServiceComparisonTest : MongoIntegrationTest() {
         assertEquals(62.0, heartRate.min)
         assertEquals(80.0, heartRate.max)
         assertNotNull(heartRate.median)
+        Unit
     }
 }

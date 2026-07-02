@@ -2,6 +2,7 @@ package routing.query
 
 import db.property.PropertyObservationService
 import db.property.PropertyService
+import routing.query.event.cohort.cohortRoutes
 import routing.query.event.comparison.propertyComparisonRoutes
 import routing.query.event.stats.propertyStatsRoutes
 import routing.query.event.values.propertyValuesRoutes
@@ -15,6 +16,7 @@ fun Route.queryRoutes(
     propertyValuesRoutes(propertyEventService)
     propertyStatsRoutes(propertyEventService)
     propertyComparisonRoutes(propertyEventService)
+    cohortRoutes(propertyEventService)
     route("/query") {
         propertyQueryRoutes(propertyService)
     }
