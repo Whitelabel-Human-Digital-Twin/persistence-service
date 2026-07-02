@@ -711,6 +711,22 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ComparisonSearchResult'
+  /query/cohort:
+    post:
+      operationId: query/cohort
+      summary: Query cohort frame (per-DT values + stats + population summary) by comparisons
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PropertiesByComparisonsRequestDto'
+      responses:
+        '200':
+          description: POST /query/cohort response 200
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CohortResult'
 components:
   schemas:
     TagPredicate:
@@ -1648,6 +1664,72 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/PropertiesByComparisonsAggregateResponse'
+        populationStats:
+          type: array
+          items:
+            $ref: '#/components/schemas/PropertyPopulationStats'
+    CohortPropertyCell:
+      type: object
+      title: io.github.whdt.routing.query.event.cohort.CohortPropertyCell
+      required:
+      - propertyName
+      - count
+      properties:
+        propertyName:
+          type: string
+        value:
+          $ref: '#/components/schemas/PropertyValue'
+          nullable: true
+        count:
+          type: integer
+        avg:
+          type:
+          - number
+          - 'null'
+        min:
+          type:
+          - number
+          - 'null'
+        max:
+          type:
+          - number
+          - 'null'
+        median:
+          type:
+          - number
+          - 'null'
+        p25:
+          type:
+          - number
+          - 'null'
+        p75:
+          type:
+          - number
+          - 'null'
+    CohortRow:
+      type: object
+      title: io.github.whdt.routing.query.event.cohort.CohortRow
+      required:
+      - hdtId
+      - properties
+      properties:
+        hdtId:
+          type: string
+        properties:
+          type: array
+          items:
+            $ref: '#/components/schemas/CohortPropertyCell'
+    CohortResult:
+      type: object
+      title: io.github.whdt.routing.query.event.cohort.CohortResult
+      required:
+      - rows
+      - populationStats
+      properties:
+        rows:
+          type: array
+          items:
+            $ref: '#/components/schemas/CohortRow'
         populationStats:
           type: array
           items:

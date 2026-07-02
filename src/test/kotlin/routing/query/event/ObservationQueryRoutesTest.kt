@@ -26,6 +26,7 @@ import org.junit.jupiter.api.Test
 import routing.query.event.values.propertyValuesRoutes
 import routing.query.event.stats.propertyStatsRoutes
 import routing.query.event.comparison.propertyComparisonRoutes
+import routing.query.event.cohort.cohortRoutes
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import kotlin.time.Instant
@@ -145,5 +146,25 @@ class ObservationQueryRoutesTest : MongoIntegrationTest() {
         assertTrue(body.contains("\"median\""), "populationStats entries should include median")
         assertTrue(body.contains("\"p25\""), "populationStats entries should include p25")
         assertTrue(body.contains("\"p75\""), "populationStats entries should include p75")
+    }
+
+    @Test
+    fun `POST query cohort returns 200`() = testApplication {
+        application {
+            configureSerialization()
+            routing { cohortRoutes(observationService) }
+        }
+        val response = client.post("/query/cohort") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"comparisons":[{"propertyName":"temperature","comparison":"GTE","value":30.0}],"modelNames":null}""")
+        }
+        assertEquals(HttpStatusCode.OK, response.status)
+        val body = response.bodyAsText()
+        assertTrue(body.contains("\"rows\""), "Response should contain rows")
+        assertTrue(body.contains("\"populationStats\""), "Response should contain populationStats")
+        assertTrue(body.contains("\"value\""), "rows should contain the latest value per property")
+        assertTrue(body.contains("\"median\""), "rows should contain median")
+        assertTrue(body.contains("\"p25\""), "rows should contain p25")
+        assertTrue(body.contains("\"p75\""), "rows should contain p75")
     }
 }

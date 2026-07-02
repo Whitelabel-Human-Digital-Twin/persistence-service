@@ -29,7 +29,11 @@ import routing.query.event.comparison.ComparisonSearchResult
 import routing.query.event.comparison.PropertiesByComparisonsAggregateResponse
 import routing.query.event.comparison.PropertyComparison
 import routing.query.event.comparison.PropertyPopulationStats
+import routing.query.event.cohort.CohortPropertyCell
+import routing.query.event.cohort.CohortResult
+import routing.query.event.cohort.CohortRow
 import routing.query.event.stats.PropertyStatsPerHdt
+import io.github.ktwinx.core.hdt.model.property.toPropertyValue
 import java.time.Instant
 import java.util.*
 
@@ -267,53 +271,97 @@ class PropertyObservationService(val db: MongoDatabase) {
         findObservationsWithFilter(filter)
     }
 
+    private fun buildPropertyComparisonFilter(pc: PropertyComparison): Bson =
+        and(
+            eq("metaField.propertyName", pc.propertyName.value),
+            buildValueFilter(pc.comparison, pc.value)
+        )
+
+    private fun comparisonGateOuterFilters(
+        modelNames: List<ModelName>?,
+        from: Instant?,
+        to: Instant?
+    ): MutableList<Bson> {
+        val filters = mutableListOf(baseMatch(from = from, to = to))
+        if (!modelNames.isNullOrEmpty())
+            filters += `in`("metaField.modelName", modelNames.map { it.value })
+        return filters
+    }
+
+    /**
+     * The comparison-matching gate shared by [observationsByComparisonsAggregate] and [cohortExplore]:
+     * a DT is "matched" only if it has at least one observation satisfying each compared property
+     * (comparison-OR match -> group by hdtId + addToSet(matchedProperties) -> match(all(matchedProperties))).
+     */
+    private suspend fun matchedHdtIds(
+        comparisons: List<PropertyComparison>,
+        modelNames: List<ModelName>? = null,
+        from: Instant? = null,
+        to: Instant? = null,
+    ): List<HdtId> = withContext(Dispatchers.IO) {
+        val propertyNames = comparisons.map { it.propertyName.value }.distinct()
+        val comparisonOrFilter = or(comparisons.map(::buildPropertyComparisonFilter))
+        val finalMatch = and(comparisonGateOuterFilters(modelNames, from, to) + comparisonOrFilter)
+        val pipeline = listOf(
+            match(finalMatch),
+            group(
+                "\$metaField.hdtId",
+                addToSet("matchedProperties", "\$metaField.propertyName")
+            ),
+            match(all("matchedProperties", propertyNames)),
+            project(fields(include("_id")))
+        )
+        collection.aggregate(pipeline)
+            .mapNotNull { it.getString("_id") }
+            .toList()
+            .map { HdtId(it) }
+    }
+
     suspend fun observationsByComparisonsAggregate(
         propertyComparisons: List<PropertyComparison>,
         modelNames: List<ModelName>? = null,
         from: Instant? = null,
         to: Instant? = null
     ): ComparisonSearchResult = withContext(Dispatchers.IO) {
-        fun buildPropertyComparisonFilter(pc: PropertyComparison): Bson =
-            and(
-                eq("metaField.propertyName", pc.propertyName.value),
-                buildValueFilter(pc.comparison, pc.value)
-            )
         val propertyNames = propertyComparisons.map { it.propertyName.value }.distinct()
-        val outerFilters = mutableListOf(baseMatch(from = from, to = to))
-        if (!modelNames.isNullOrEmpty())
-            outerFilters += `in`("metaField.modelName", modelNames.map { it.value })
-        val comparisonOrFilter = or(propertyComparisons.map(::buildPropertyComparisonFilter))
-        val finalMatch = and(
-            outerFilters + comparisonOrFilter
-        )
-        val pipeline = listOf(
-            match(finalMatch),
-            group(
-                "\$metaField.hdtId",
-                addToSet("matchedProperties", "\$metaField.propertyName"),
-                push(
-                    "matchedEvents",
-                    Document()
-                        .append("propertyName", "\$metaField.propertyName")
-                        .append("value", "\$value")
-                        .append("timeField", "\$timeField")
-                )
-            ),
-            match(all("matchedProperties", propertyNames))
-        )
-        val matches = collection.aggregate(pipeline)
-            .mapNotNull {
-               PropertiesByComparisonsAggregateResponse.fromDocument(it)
-           }
-           .toList()
-           .sortedBy { it.hdtId.id }
+        val matchedIds = matchedHdtIds(propertyComparisons, modelNames, from, to)
 
-        val matchedHdtIds = matches.map { it.hdtId.id }
-        val populationStats = if (matchedHdtIds.isEmpty()) {
+        val matches = if (matchedIds.isEmpty()) {
+            emptyList()
+        } else {
+            val comparisonOrFilter = or(propertyComparisons.map(::buildPropertyComparisonFilter))
+            val finalMatch = and(
+                comparisonGateOuterFilters(modelNames, from, to) +
+                    comparisonOrFilter +
+                    `in`("metaField.hdtId", matchedIds.map { it.id })
+            )
+            val pipeline = listOf(
+                match(finalMatch),
+                group(
+                    "\$metaField.hdtId",
+                    addToSet("matchedProperties", "\$metaField.propertyName"),
+                    push(
+                        "matchedEvents",
+                        Document()
+                            .append("propertyName", "\$metaField.propertyName")
+                            .append("value", "\$value")
+                            .append("timeField", "\$timeField")
+                    )
+                )
+            )
+            collection.aggregate(pipeline)
+                .mapNotNull {
+                   PropertiesByComparisonsAggregateResponse.fromDocument(it)
+               }
+               .toList()
+               .sortedBy { it.hdtId.id }
+        }
+
+        val populationStats = if (matchedIds.isEmpty()) {
             emptyList()
         } else {
             val populationFilters = mutableListOf<Bson>(
-                `in`("metaField.hdtId", matchedHdtIds),
+                `in`("metaField.hdtId", matchedIds.map { it.id }),
                 `in`("metaField.propertyName", propertyNames),
             )
             populationFilters += baseMatch(from = from, to = to)
@@ -338,5 +386,115 @@ class PropertyObservationService(val db: MongoDatabase) {
         }
 
         ComparisonSearchResult(matches = matches, populationStats = populationStats)
+    }
+
+    private data class HdtPropertyKey(val hdtId: String, val propertyName: String)
+
+    private fun Document.hdtPropertyKey(): HdtPropertyKey {
+        val id = get("_id", Document::class.java)!!
+        return HdtPropertyKey(id.getString("hdtId"), id.getString("propertyName"))
+    }
+
+    /**
+     * Cohort frame: one row per matched DT with its own per-property windowed stats plus a
+     * population-summary block. Unlike [observationsByComparisonsAggregate], observations here are
+     * NOT re-filtered by the comparison values -- only by the matched-DT set, window, and model.
+     */
+    suspend fun cohortExplore(
+        comparisons: List<PropertyComparison>,
+        modelNames: List<ModelName>? = null,
+        from: Instant? = null,
+        to: Instant? = null,
+    ): CohortResult = withContext(Dispatchers.IO) {
+        val matchedIds = matchedHdtIds(comparisons, modelNames, from, to)
+        if (matchedIds.isEmpty()) {
+            return@withContext CohortResult(rows = emptyList(), populationStats = emptyList())
+        }
+
+        val filters = mutableListOf<Bson>(`in`("metaField.hdtId", matchedIds.map { it.id }))
+        filters += baseMatch(from = from, to = to)
+        if (!modelNames.isNullOrEmpty())
+            filters += `in`("metaField.modelName", modelNames.map { it.value })
+
+        // Stat accumulators (avg/min/max/percentile) are only meaningful for numeric values;
+        // categorical properties still get a `value` (via $top below) but no stats.
+        val numericGuard = expr(Document("\$isNumber", "\$value"))
+        val perDtIdDoc = Document("hdtId", "\$metaField.hdtId").append("propertyName", "\$metaField.propertyName")
+
+        val pipeline = listOf(
+            match(and(filters)),
+            facet(
+                Facet(
+                    "latest",
+                    listOf(
+                        group(perDtIdDoc, Accumulators.top("latest", Sorts.descending("timeField"), "\$value"))
+                    )
+                ),
+                Facet(
+                    "perDtStats",
+                    listOf(
+                        match(numericGuard),
+                        group(
+                            perDtIdDoc,
+                            Accumulators.sum("count", 1),
+                            Accumulators.avg("avg", "\$value"),
+                            Accumulators.min("min", "\$value"),
+                            Accumulators.max("max", "\$value"),
+                            Accumulators.percentile("pct", "\$value", listOf(0.25, 0.5, 0.75), QuantileMethod.approximate())
+                        )
+                    )
+                ),
+                Facet(
+                    "population",
+                    listOf(
+                        match(numericGuard),
+                        group(
+                            "\$metaField.propertyName",
+                            Accumulators.sum("count", 1),
+                            Accumulators.avg("avg", "\$value"),
+                            Accumulators.min("min", "\$value"),
+                            Accumulators.max("max", "\$value"),
+                            Accumulators.percentile("pct", "\$value", listOf(0.25, 0.5, 0.75), QuantileMethod.approximate())
+                        )
+                    )
+                )
+            )
+        )
+
+        val facetDoc = collection.aggregate(pipeline).firstOrNull() ?: Document()
+        val latestDocs = facetDoc.getList("latest", Document::class.java).orEmpty()
+        val statsDocs = facetDoc.getList("perDtStats", Document::class.java).orEmpty()
+        val populationDocs = facetDoc.getList("population", Document::class.java).orEmpty()
+
+        val statsByKey = statsDocs.associateBy { it.hdtPropertyKey() }
+
+        val cellsByHdt = mutableMapOf<String, MutableList<CohortPropertyCell>>()
+        for (doc in latestDocs) {
+            val key = doc.hdtPropertyKey()
+            val stats = statsByKey[key]
+            val percentiles = stats?.getList("pct", Number::class.java).orEmpty()
+            val cell = CohortPropertyCell(
+                propertyName = PropertyName(key.propertyName),
+                value = doc["latest"]?.toPropertyValue(),
+                count = (stats?.get("count") as? Number)?.toLong() ?: 0L,
+                avg = (stats?.get("avg") as? Number)?.toDouble(),
+                min = (stats?.get("min") as? Number)?.toDouble(),
+                max = (stats?.get("max") as? Number)?.toDouble(),
+                p25 = percentiles.getOrNull(0)?.toDouble(),
+                median = percentiles.getOrNull(1)?.toDouble(),
+                p75 = percentiles.getOrNull(2)?.toDouble(),
+            )
+            cellsByHdt.getOrPut(key.hdtId) { mutableListOf() }.add(cell)
+        }
+
+        val rows = cellsByHdt.map { (hdtId, cells) ->
+            CohortRow(hdtId = HdtId(hdtId), properties = cells.sortedBy { it.propertyName.value })
+        }.sortedBy { it.hdtId.id }
+
+        val populationStats = populationDocs
+            .mapNotNull { PropertyPopulationStats.fromDocument(it) }
+            .sortedBy { it.propertyName.value }
+
+        CohortResult(rows = rows, populationStats = populationStats)
     }
 }
