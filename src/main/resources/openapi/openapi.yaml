@@ -444,6 +444,20 @@ paths:
           description: Property not found
         '500':
           description: Failed to update tags
+  /properties/names:
+    get:
+      operationId: properties/names
+      summary: List distinct Property names
+      description: Returns the distinct set of propertyName values across all Property specs
+      responses:
+        '200':
+          description: Distinct property names
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
   /observations/batch:
     post:
       operationId: observations/batch/insert
@@ -855,6 +869,13 @@ components:
         to:
           type: string
           format: date-time
+          nullable: true
+        metadataFilters:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
           nullable: true
     mqtt-physical-interface:
       type: object

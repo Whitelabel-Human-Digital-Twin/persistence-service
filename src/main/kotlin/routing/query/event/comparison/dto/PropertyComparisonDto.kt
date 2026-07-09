@@ -18,5 +18,7 @@ data class PropertiesByComparisonsRequestDto(
     val comparisons: List<PropertyComparisonDto>,
     val modelNames: List<ModelName>? = null,
     val from: Instant? = null,
-    val to: Instant? = null
+    val to: Instant? = null,
+    /** Conjunction of `$in` predicates over `metadata.<key>`; absent/empty = no filter. */
+    val metadataFilters: Map<String, List<String>>? = null,
 )

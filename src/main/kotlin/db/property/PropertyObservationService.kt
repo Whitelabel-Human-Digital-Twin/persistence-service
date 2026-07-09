@@ -10,6 +10,7 @@ import com.mongodb.client.model.Filters.*
 import com.mongodb.client.model.Projections.fields
 import com.mongodb.client.model.Projections.include
 import com.mongodb.client.model.QuantileMethod
+import db.query.toMetadataBson
 import db.util.OperationResult
 import db.util.runCatchingResult
 import io.github.ktwinx.core.hdt.HdtId
@@ -280,11 +281,13 @@ class PropertyObservationService(val db: MongoDatabase) {
     private fun comparisonGateOuterFilters(
         modelNames: List<ModelName>?,
         from: Instant?,
-        to: Instant?
+        to: Instant?,
+        metadataFilters: Map<String, List<String>>? = null,
     ): MutableList<Bson> {
         val filters = mutableListOf(baseMatch(from = from, to = to))
         if (!modelNames.isNullOrEmpty())
             filters += `in`("metaField.modelName", modelNames.map { it.value })
+        metadataFilters?.toMetadataBson()?.let { filters += it }
         return filters
     }
 
@@ -298,10 +301,11 @@ class PropertyObservationService(val db: MongoDatabase) {
         modelNames: List<ModelName>? = null,
         from: Instant? = null,
         to: Instant? = null,
+        metadataFilters: Map<String, List<String>>? = null,
     ): List<HdtId> = withContext(Dispatchers.IO) {
         val propertyNames = comparisons.map { it.propertyName.value }.distinct()
         val comparisonOrFilter = or(comparisons.map(::buildPropertyComparisonFilter))
-        val finalMatch = and(comparisonGateOuterFilters(modelNames, from, to) + comparisonOrFilter)
+        val finalMatch = and(comparisonGateOuterFilters(modelNames, from, to, metadataFilters) + comparisonOrFilter)
         val pipeline = listOf(
             match(finalMatch),
             group(
@@ -321,17 +325,18 @@ class PropertyObservationService(val db: MongoDatabase) {
         propertyComparisons: List<PropertyComparison>,
         modelNames: List<ModelName>? = null,
         from: Instant? = null,
-        to: Instant? = null
+        to: Instant? = null,
+        metadataFilters: Map<String, List<String>>? = null,
     ): ComparisonSearchResult = withContext(Dispatchers.IO) {
         val propertyNames = propertyComparisons.map { it.propertyName.value }.distinct()
-        val matchedIds = matchedHdtIds(propertyComparisons, modelNames, from, to)
+        val matchedIds = matchedHdtIds(propertyComparisons, modelNames, from, to, metadataFilters)
 
         val matches = if (matchedIds.isEmpty()) {
             emptyList()
         } else {
             val comparisonOrFilter = or(propertyComparisons.map(::buildPropertyComparisonFilter))
             val finalMatch = and(
-                comparisonGateOuterFilters(modelNames, from, to) +
+                comparisonGateOuterFilters(modelNames, from, to, metadataFilters) +
                     comparisonOrFilter +
                     `in`("metaField.hdtId", matchedIds.map { it.id })
             )
@@ -367,6 +372,7 @@ class PropertyObservationService(val db: MongoDatabase) {
             populationFilters += baseMatch(from = from, to = to)
             if (!modelNames.isNullOrEmpty())
                 populationFilters += `in`("metaField.modelName", modelNames.map { it.value })
+            metadataFilters?.toMetadataBson()?.let { populationFilters += it }
 
             val populationPipeline = listOf(
                 match(and(populationFilters)),
@@ -405,8 +411,9 @@ class PropertyObservationService(val db: MongoDatabase) {
         modelNames: List<ModelName>? = null,
         from: Instant? = null,
         to: Instant? = null,
+        metadataFilters: Map<String, List<String>>? = null,
     ): CohortResult = withContext(Dispatchers.IO) {
-        val matchedIds = matchedHdtIds(comparisons, modelNames, from, to)
+        val matchedIds = matchedHdtIds(comparisons, modelNames, from, to, metadataFilters)
         if (matchedIds.isEmpty()) {
             return@withContext CohortResult(rows = emptyList(), populationStats = emptyList())
         }
@@ -415,6 +422,7 @@ class PropertyObservationService(val db: MongoDatabase) {
         filters += baseMatch(from = from, to = to)
         if (!modelNames.isNullOrEmpty())
             filters += `in`("metaField.modelName", modelNames.map { it.value })
+        metadataFilters?.toMetadataBson()?.let { filters += it }
 
         // Stat accumulators (avg/min/max/percentile) are only meaningful for numeric values;
         // categorical properties still get a `value` (via $top below) but no stats.

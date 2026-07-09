@@ -29,7 +29,8 @@ fun Route.cohortRoutes(
                 domainComparisons,
                 req.modelNames,
                 req.from?.toJavaInstant(),
-                req.to?.toJavaInstant()
+                req.to?.toJavaInstant(),
+                req.metadataFilters
             )
             call.respond(HttpStatusCode.OK, result)
         }.describe {
