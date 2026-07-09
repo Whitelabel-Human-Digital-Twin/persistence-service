@@ -13,6 +13,7 @@ import io.github.ktwinx.core.hdt.HdtId
 import io.github.ktwinx.core.hdt.model.ModelId
 import io.github.ktwinx.core.hdt.model.property.Property
 import io.github.ktwinx.core.hdt.model.property.PropertyId
+import io.github.ktwinx.core.hdt.model.property.PropertyName
 import io.github.ktwinx.core.hdt.query.TagPredicate
 import db.query.toBson
 import db.util.OperationResult
@@ -59,6 +60,10 @@ class PropertyService(private val database: MongoDatabase) {
         withContext(Dispatchers.IO) {
             collection.find(predicate.toBson()).toList().mapNotNull(PropertyDocument::fromDocument)
         }
+
+    suspend fun distinctPropertyNames(): List<PropertyName> = withContext(Dispatchers.IO) {
+        collection.distinct("propertyName", String::class.java).toList().map { PropertyName(it) }
+    }
 
     suspend fun replaceTags(
         hdtId: HdtId,
