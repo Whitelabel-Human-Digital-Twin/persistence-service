@@ -95,7 +95,7 @@ class PropertyObservationService(val db: MongoDatabase) {
         filter: Bson,
     ): List<PropertyObservationDocument> = withContext(Dispatchers.IO) {
         collection.find(filter)
-            .projection(fields(include("metaField", "timeField", "value")))
+            .projection(fields(include("metaField", "timeField", "value", "metadata")))
             .toList()
             .mapNotNull(PropertyObservationDocument::fromDocument)
     }
@@ -142,7 +142,7 @@ class PropertyObservationService(val db: MongoDatabase) {
     ): List<PropertyObservationDocument> = withContext(Dispatchers.IO) {
         val filters = baseMatch(hdtId = hdtId.id, propertyName = propertyName.value)
         collection.find(filters)
-            .projection(fields(include("metaField", "timeField", "value")))
+            .projection(fields(include("metaField", "timeField", "value", "metadata")))
             .toList()
             .mapNotNull(PropertyObservationDocument::fromDocument)
     }

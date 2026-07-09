@@ -50,7 +50,7 @@ class ObservationQueryRoutesTest : MongoIntegrationTest() {
                 propertyName = PropertyName("temperature"),
                 value = PropertyValue.DoublePropertyValue(36.6),
                 timestamp = ts,
-                metadata = mapOf("source" to "sensor"),
+                metadata = mapOf("source" to "sensor", "age" to "34", "task" to "walking"),
             ),
             PropertyObservation(
                 hdtId = HdtId("query-hdt"),
@@ -60,7 +60,7 @@ class ObservationQueryRoutesTest : MongoIntegrationTest() {
                 propertyName = PropertyName("temperature"),
                 value = PropertyValue.DoublePropertyValue(37.1),
                 timestamp = Instant.parse("2026-01-15T11:00:00Z"),
-                metadata = mapOf("source" to "sensor"),
+                metadata = mapOf("source" to "sensor", "age" to "34", "task" to "running"),
             ),
         )
         val docs = observations
@@ -82,6 +82,8 @@ class ObservationQueryRoutesTest : MongoIntegrationTest() {
         assertEquals(HttpStatusCode.OK, response.status)
         val body = response.bodyAsText()
         assertTrue(body.contains("temperature"), "Response should contain property name")
+        assertTrue(body.contains("\"age\""), "Response should include the stored age metadata key")
+        assertTrue(body.contains("\"walking\""), "Response should include the stored task metadata value")
     }
 
     @Test
@@ -97,6 +99,7 @@ class ObservationQueryRoutesTest : MongoIntegrationTest() {
         assertEquals(HttpStatusCode.OK, response.status)
         val body = response.bodyAsText()
         assertTrue(body.contains("temperature"), "Response should contain property name")
+        assertTrue(body.contains("\"age\""), "Response should include the stored age metadata key")
     }
 
     @Test
@@ -112,6 +115,9 @@ class ObservationQueryRoutesTest : MongoIntegrationTest() {
         assertEquals(HttpStatusCode.OK, response.status)
         val body = response.bodyAsText()
         assertTrue(body.contains("temperature"), "Response should include history for the property")
+        assertTrue(body.contains("\"age\""), "History response should include the stored age metadata key")
+        assertTrue(body.contains("\"walking\""), "History response should include the stored task metadata value")
+        assertTrue(body.contains("\"running\""), "History response should include the stored task metadata value")
     }
 
     @Test
