@@ -173,4 +173,25 @@ class ObservationQueryRoutesTest : MongoIntegrationTest() {
         assertTrue(body.contains("\"p25\""), "rows should contain p25")
         assertTrue(body.contains("\"p75\""), "rows should contain p75")
     }
+
+    @Test
+    fun `POST query cohort with a same-property range excludes a DT with no single observation inside the interval`() = testApplication {
+        application {
+            configureSerialization()
+            routing { cohortRoutes(observationService) }
+        }
+        // query-hdt's readings are 36.6 and 37.1 -- both satisfy `temperature < 40` individually
+        // (which the pre-fix OR-based gate would accept), but neither satisfies
+        // `temperature > 38 AND temperature < 40` on a single document, so a correct
+        // document-level range filter must exclude query-hdt here.
+        val response = client.post("/query/cohort") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """{"comparisons":[{"propertyName":"temperature","comparison":"GT","value":38.0},{"propertyName":"temperature","comparison":"LT","value":40.0}],"modelNames":null}"""
+            )
+        }
+        assertEquals(HttpStatusCode.OK, response.status)
+        val body = response.bodyAsText()
+        assertTrue(!body.contains("query-hdt"), "no single temperature reading falls inside (38.0, 40.0), so query-hdt must not match")
+    }
 }

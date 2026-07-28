@@ -272,10 +272,26 @@ class PropertyObservationService(val db: MongoDatabase) {
         findObservationsWithFilter(filter)
     }
 
-    private fun buildPropertyComparisonFilter(pc: PropertyComparison): Bson =
-        and(
-            eq("metaField.propertyName", pc.propertyName.value),
-            buildValueFilter(pc.comparison, pc.value)
+    /**
+     * Document-level filter for a set of comparisons.
+     *
+     * Predicates on the SAME property are conjoined: they must all hold on a single observation
+     * document, which is what makes range ("between") filters work. Groups on DIFFERENT properties
+     * are disjoined, because one document carries exactly one property and a cross-property
+     * conjunction would match nothing. The cross-property conjunction is re-imposed at DT level by
+     * the `all("matchedProperties", ...)` gate in [matchedHdtIds].
+     *
+     * Semantics: a DT qualifies if it has AT LEAST ONE observation satisfying each property's full
+     * conjunction (existential, not universal).
+     */
+    private fun buildComparisonGroupFilter(comparisons: List<PropertyComparison>): Bson =
+        or(
+            comparisons.groupBy { it.propertyName.value }.map { (propertyName, group) ->
+                and(
+                    listOf(eq("metaField.propertyName", propertyName)) +
+                        group.map { buildValueFilter(it.comparison, it.value) }
+                )
+            }
         )
 
     private fun comparisonGateOuterFilters(
@@ -304,8 +320,8 @@ class PropertyObservationService(val db: MongoDatabase) {
         metadataFilters: Map<String, List<String>>? = null,
     ): List<HdtId> = withContext(Dispatchers.IO) {
         val propertyNames = comparisons.map { it.propertyName.value }.distinct()
-        val comparisonOrFilter = or(comparisons.map(::buildPropertyComparisonFilter))
-        val finalMatch = and(comparisonGateOuterFilters(modelNames, from, to, metadataFilters) + comparisonOrFilter)
+        val comparisonFilter = buildComparisonGroupFilter(comparisons)
+        val finalMatch = and(comparisonGateOuterFilters(modelNames, from, to, metadataFilters) + comparisonFilter)
         val pipeline = listOf(
             match(finalMatch),
             group(
@@ -334,10 +350,10 @@ class PropertyObservationService(val db: MongoDatabase) {
         val matches = if (matchedIds.isEmpty()) {
             emptyList()
         } else {
-            val comparisonOrFilter = or(propertyComparisons.map(::buildPropertyComparisonFilter))
+            val comparisonFilter = buildComparisonGroupFilter(propertyComparisons)
             val finalMatch = and(
                 comparisonGateOuterFilters(modelNames, from, to, metadataFilters) +
-                    comparisonOrFilter +
+                    comparisonFilter +
                     `in`("metaField.hdtId", matchedIds.map { it.id })
             )
             val pipeline = listOf(
