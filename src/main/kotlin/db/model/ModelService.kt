@@ -27,6 +27,7 @@ class ModelService(private val database: MongoDatabase) {
         }
         collection = database.getCollection("models")
         collection.createIndex(Indexes.ascending("modelId"), IndexOptions().unique(true))
+        collection.createIndex(Indexes.ascending("modelName"))
     }
 
     suspend fun create(model: Model): ModelDocument = withContext(Dispatchers.IO) {
@@ -85,7 +86,7 @@ class ModelService(private val database: MongoDatabase) {
     }
 
     suspend fun findByName(modelName: ModelName): List<ModelDocument> = withContext(Dispatchers.IO) {
-        findAll().filter { it.modelName == modelName }
+        collection.find(eq("modelName", modelName.value)).toList().map(ModelDocument::fromDocument)
     }
 
     suspend fun findByHdtId(hdtId: HdtId): List<ModelDocument> = withContext(Dispatchers.IO) {

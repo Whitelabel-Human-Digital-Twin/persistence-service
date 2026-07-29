@@ -34,9 +34,13 @@ import routing.query.event.cohort.CohortPropertyCell
 import routing.query.event.cohort.CohortResult
 import routing.query.event.cohort.CohortRow
 import routing.query.event.stats.PropertyStatsPerHdt
+import routing.query.availability.HdtModelAvailability
+import routing.query.availability.ModelAvailability
+import routing.query.availability.ModelMatchMode
 import io.github.ktwinx.core.hdt.model.property.toPropertyValue
 import java.time.Instant
 import java.util.*
+import kotlin.time.toKotlinInstant
 
 class PropertyObservationService(val db: MongoDatabase) {
     var collection: MongoCollection<Document>
@@ -51,6 +55,9 @@ class PropertyObservationService(val db: MongoDatabase) {
             db.createCollection("observations", ccOptions)
         }
         collection = db.getCollection("observations")
+        // Outside the `if (!exists)` branch: the branch above only runs for a brand-new collection,
+        // so index creation must happen unconditionally to reach already-deployed collections.
+        collection.createIndex(Indexes.ascending("metaField.modelName"))
     }
 
     /** CRUD OPERATIONS **/
@@ -520,5 +527,69 @@ class PropertyObservationService(val db: MongoDatabase) {
             .sortedBy { it.propertyName.value }
 
         CohortResult(rows = rows, populationStats = populationStats)
+    }
+
+    /**
+     * Raw-data availability matrix: per HDT, which models have observations (with count and
+     * acquisition window), scoped to [modelNames]/[metadataFilters]/[from]/[to].
+     *
+     * NOTE: this depends on `metaField.modelName`, which [PropertyObservationDocument.fromObservation]
+     * derives from `modelId.value.split(":").last()` rather than from `observation.modelName`. That
+     * derivation is fragile but out of scope here -- see the migration note on that function.
+     */
+    suspend fun hdtsByModel(
+        modelNames: List<ModelName>?,
+        match: ModelMatchMode,
+        metadataFilters: Map<String, List<String>>?,
+        from: Instant?,
+        to: Instant?,
+    ): List<HdtModelAvailability> = withContext(Dispatchers.IO) {
+        val filters = mutableListOf<Bson>(baseMatch(from = from, to = to))
+        if (!modelNames.isNullOrEmpty())
+            filters += `in`("metaField.modelName", modelNames.map { it.value })
+        metadataFilters?.toMetadataBson()?.let { filters += it }
+
+        val perHdtModelId = Document("hdtId", "\$metaField.hdtId").append("modelName", "\$metaField.modelName")
+
+        val pipeline = mutableListOf(
+            match(and(filters)),
+            group(
+                perHdtModelId,
+                Accumulators.sum("observationCount", 1),
+                Accumulators.min("firstTimestamp", "\$timeField"),
+                Accumulators.max("lastTimestamp", "\$timeField"),
+            ),
+            group(
+                "\$_id.hdtId",
+                push(
+                    "models",
+                    Document()
+                        .append("modelName", "\$_id.modelName")
+                        .append("observationCount", "\$observationCount")
+                        .append("firstTimestamp", "\$firstTimestamp")
+                        .append("lastTimestamp", "\$lastTimestamp")
+                )
+            ),
+        )
+        if (match == ModelMatchMode.ALL && !modelNames.isNullOrEmpty()) {
+            pipeline += match(
+                expr(Document("\$eq", listOf(Document("\$size", "\$models"), modelNames.distinct().size)))
+            )
+        }
+        pipeline += sort(Sorts.ascending("_id"))
+
+        collection.aggregate(pipeline)
+            .mapNotNull { doc ->
+                val hdtId = doc.getString("_id") ?: return@mapNotNull null
+                val models = doc.getList("models", Document::class.java).orEmpty().mapNotNull { m ->
+                    val modelName = m.getString("modelName") ?: return@mapNotNull null
+                    val count = (m["observationCount"] as? Number)?.toLong() ?: return@mapNotNull null
+                    val first = m.getDate("firstTimestamp")?.toInstant()?.toKotlinInstant() ?: return@mapNotNull null
+                    val last = m.getDate("lastTimestamp")?.toInstant()?.toKotlinInstant() ?: return@mapNotNull null
+                    ModelAvailability(ModelName(modelName), count, first, last)
+                }
+                HdtModelAvailability(HdtId(hdtId), models)
+            }
+            .toList()
     }
 }

@@ -741,6 +741,24 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CohortResult'
+  /query/hdts/by-model:
+    post:
+      operationId: query/hdts/by-model
+      summary: List HDTs having raw observation data for the given models
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HdtsByModelRequestDto'
+      responses:
+        '200':
+          description: POST /query/hdts/by-model response 200
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/HdtModelAvailability'
 components:
   schemas:
     TagPredicate:
@@ -1760,6 +1778,65 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/PropertyPopulationStats'
+    HdtsByModelRequestDto:
+      type: object
+      title: io.github.whdt.routing.query.availability.HdtsByModelRequestDto
+      properties:
+        modelNames:
+          type: array
+          items:
+            type: string
+          nullable: true
+        match:
+          type: string
+          enum: [ ANY, ALL ]
+        metadataFilters:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+          nullable: true
+        from:
+          type: string
+          format: date-time
+          nullable: true
+        to:
+          type: string
+          format: date-time
+          nullable: true
+    ModelAvailability:
+      type: object
+      title: io.github.whdt.routing.query.availability.ModelAvailability
+      required:
+      - modelName
+      - observationCount
+      - firstTimestamp
+      - lastTimestamp
+      properties:
+        modelName:
+          type: string
+        observationCount:
+          type: integer
+        firstTimestamp:
+          type: string
+          format: date-time
+        lastTimestamp:
+          type: string
+          format: date-time
+    HdtModelAvailability:
+      type: object
+      title: io.github.whdt.routing.query.availability.HdtModelAvailability
+      required:
+      - hdtId
+      - models
+      properties:
+        hdtId:
+          type: string
+        models:
+          type: array
+          items:
+            $ref: '#/components/schemas/ModelAvailability'
     View:
       type: object
       title: io.github.whdt.core.hdt.view.View
