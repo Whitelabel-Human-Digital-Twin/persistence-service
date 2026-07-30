@@ -2,8 +2,12 @@ package db.property
 
 import com.mongodb.client.MongoCollection
 import com.mongodb.client.MongoDatabase
+import com.mongodb.client.model.Accumulators
+import com.mongodb.client.model.Aggregates.group
+import com.mongodb.client.model.Aggregates.match
 import com.mongodb.client.model.Filters.eq
 import com.mongodb.client.model.Filters.and
+import com.mongodb.client.model.Filters.gte
 import com.mongodb.client.model.IndexOptions
 import com.mongodb.client.model.Indexes
 import com.mongodb.client.model.ReplaceOneModel
@@ -61,8 +65,33 @@ class PropertyService(private val database: MongoDatabase) {
             collection.find(predicate.toBson()).toList().mapNotNull(PropertyDocument::fromDocument)
         }
 
+    /**
+     * Canonical declaration order for every property name in the store.
+     * Value is the minimum assigned (>= 0) ordinal observed for that name across all HDTs.
+     * Names for which no HDT has an assigned ordinal are absent from the map and must be
+     * sorted last by callers.
+     */
+    suspend fun canonicalPropertyOrder(): Map<PropertyName, Int> = withContext(Dispatchers.IO) {
+        val pipeline = listOf(
+            match(gte("ordinal", 0)),
+            group("\$propertyName", Accumulators.min("ordinal", "\$ordinal")),
+        )
+        collection.aggregate(pipeline)
+            .mapNotNull { doc ->
+                val name = doc.getString("_id") ?: return@mapNotNull null
+                val ordinal = doc.getInteger("ordinal") ?: return@mapNotNull null
+                PropertyName(name) to ordinal
+            }
+            .toList()
+            .toMap()
+    }
+
     suspend fun distinctPropertyNames(): List<PropertyName> = withContext(Dispatchers.IO) {
-        collection.distinct("propertyName", String::class.java).toList().map { PropertyName(it) }
+        val order = canonicalPropertyOrder()
+        collection.distinct("propertyName", String::class.java)
+            .toList()
+            .map { PropertyName(it) }
+            .sortedWith(propertyOrderComparator(order))
     }
 
     suspend fun replaceTags(

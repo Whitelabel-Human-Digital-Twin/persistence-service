@@ -122,4 +122,60 @@ class PropertyDocumentTest {
         assertNotNull(restored)
         assertNull(restored.coding)
     }
+
+    @Test
+    fun `toDocument and fromDocument round-trip preserves ordinal`() {
+        val original = PropertyDocument(
+            hdtId = HdtId("hdt-5"),
+            modelId = ModelId("model-5"),
+            propertyId = PropertyId("prop-5"),
+            propertyName = PropertyName("heartRate"),
+            description = "Heart rate",
+            declaredType = "INT",
+            ordinal = 4,
+        )
+
+        val bson = original.toDocument()
+        val restored = PropertyDocument.fromDocument(bson)
+
+        assertNotNull(restored)
+        assertEquals(4, restored.ordinal)
+    }
+
+    @Test
+    fun `a PropertyDocument built with no ordinal round-trips as -1`() {
+        val original = PropertyDocument(
+            hdtId = HdtId("hdt-6"),
+            modelId = ModelId("model-6"),
+            propertyId = PropertyId("prop-6"),
+            propertyName = PropertyName("spo2"),
+            description = "Oxygen saturation",
+            declaredType = "DOUBLE",
+        )
+
+        val bson = original.toDocument()
+        val restored = PropertyDocument.fromDocument(bson)
+
+        assertNotNull(restored)
+        assertEquals(-1, restored.ordinal)
+    }
+
+    @Test
+    fun `a raw Document with no ordinal key deserializes to -1`() {
+        val doc = Document()
+            .append("hdtId", "hdt-7")
+            .append("modelId", "model-7")
+            .append("propertyId", "prop-7")
+            .append("propertyName", "diagnosis")
+            .append("description", "Diagnosis")
+            .append("declaredType", "STRING")
+            .append("tags", Document())
+        // Deliberately no "ordinal" key: simulates a pre-existing document ingested
+        // before this field existed.
+
+        val restored = PropertyDocument.fromDocument(doc)
+
+        assertNotNull(restored)
+        assertEquals(-1, restored.ordinal)
+    }
 }

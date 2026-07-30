@@ -42,6 +42,16 @@ class PropertyObservationServiceCohortTest : MongoIntegrationTest() {
         metadata = emptyMap(),
     )
 
+    private fun propertySpec(hdtId: String, propertyName: String, ordinal: Int) = PropertyDocument(
+        hdtId = HdtId(hdtId),
+        modelId = ModelId("$hdtId:vitals"),
+        propertyId = PropertyId("$hdtId:vitals:$propertyName"),
+        propertyName = PropertyName(propertyName),
+        description = "test",
+        declaredType = "DOUBLE",
+        ordinal = ordinal,
+    )
+
     @BeforeAll
     fun setup() = runBlocking {
         service = PropertyObservationService(database)
@@ -64,6 +74,19 @@ class PropertyObservationServiceCohortTest : MongoIntegrationTest() {
             observation("hdt-cohort-c", "heartRate", 65.0, 0),
         )
         service.insertMany(observations)
+
+        // Declaration order deliberately differs from alphabetical order:
+        // temperature=0, heartRate=1, spo2=2 -- alphabetically: heartRate, spo2, temperature.
+        val propertyService = PropertyService(database)
+        propertyService.collection.insertMany(
+            listOf(
+                propertySpec("hdt-cohort-a", "temperature", 0),
+                propertySpec("hdt-cohort-a", "heartRate", 1),
+                propertySpec("hdt-cohort-a", "spo2", 2),
+                propertySpec("hdt-cohort-b", "temperature", 0),
+                propertySpec("hdt-cohort-b", "heartRate", 1),
+            ).map { it.toDocument() }
+        )
         Unit
     }
 
@@ -166,5 +189,39 @@ class PropertyObservationServiceCohortTest : MongoIntegrationTest() {
         assertEquals(setOf("temperature", "heartRate"), statsByProperty.keys)
         assertEquals(3L, statsByProperty.getValue("temperature").count)
         assertEquals(4L, statsByProperty.getValue("heartRate").count)
+    }
+
+    @Test
+    fun `cohortExplore orders properties by declaration order, not alphabetically`() = runBlocking {
+        val result = service.cohortExplore(
+            comparisons = comparisons,
+            from = Instant.parse("2026-01-01T00:00:00Z").toJavaInstant(),
+            to = Instant.parse("2026-03-01T00:00:00Z").toJavaInstant(),
+        )
+
+        // Declared temperature=0, heartRate=1, spo2=2; alphabetically it would be
+        // heartRate, spo2, temperature.
+        assertEquals(listOf("temperature", "heartRate", "spo2"), result.populationStats.map { it.propertyName.value })
+
+        val rowsByHdt = result.rows.associateBy { it.hdtId.id }
+        assertEquals(
+            listOf("temperature", "heartRate", "spo2"),
+            rowsByHdt.getValue("hdt-cohort-a").properties.map { it.propertyName.value },
+        )
+        assertEquals(
+            listOf("temperature", "heartRate"),
+            rowsByHdt.getValue("hdt-cohort-b").properties.map { it.propertyName.value },
+        )
+    }
+
+    @Test
+    fun `observationsByComparisonsAggregate orders populationStats by declaration order, not alphabetically`() = runBlocking {
+        val result = service.observationsByComparisonsAggregate(
+            propertyComparisons = comparisons,
+            from = Instant.parse("2026-01-01T00:00:00Z").toJavaInstant(),
+            to = Instant.parse("2026-03-01T00:00:00Z").toJavaInstant(),
+        )
+
+        assertEquals(listOf("temperature", "heartRate"), result.populationStats.map { it.propertyName.value })
     }
 }

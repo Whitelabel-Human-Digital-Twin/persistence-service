@@ -12,6 +12,7 @@ import db.hdt.HdtService
 import db.model.ModelService
 import db.property.PropertyObservationService
 import db.property.PropertyService
+import db.property.propertyOrderComparator
 import db.util.Err
 import db.util.Ok
 import db.util.OperationResult
@@ -47,6 +48,7 @@ data class PropertySpecEntry(
     val initialValue: PropertyValue? = null,
     val tags: Map<String, String> = emptyMap(),
     val coding: Coding? = null,
+    val ordinal: Int = -1,
 )
 
 @Serializable
@@ -96,6 +98,7 @@ class AssemblerService(
                         initialValue = prop.initialValue,
                         tags = prop.tags,
                         coding = prop.coding,
+                        ordinal = prop.ordinal,
                     )
                 },
                 tags = model.tags,
@@ -138,7 +141,12 @@ class AssemblerService(
 
         val latestObservations = observationService.latestPerProperty(hdtId)
 
-        val snapshot = properties.map { prop ->
+        // Each property's own ordinal is authoritative here: this is a single HDT, so there's
+        // no cross-DT ambiguity to resolve (unlike the canonical order used by cohort responses).
+        val order = properties.filter { it.ordinal >= 0 }.associate { it.propertyName to it.ordinal }
+        val orderedProperties = properties.sortedWith(compareBy(propertyOrderComparator(order)) { it.propertyName })
+
+        val snapshot = orderedProperties.map { prop ->
             val obs = latestObservations[prop.propertyId]
             PropertySnapshotEntry(
                 propertyId = prop.propertyId.value,

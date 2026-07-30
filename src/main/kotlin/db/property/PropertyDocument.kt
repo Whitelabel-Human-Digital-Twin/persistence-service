@@ -29,6 +29,7 @@ data class PropertyDocument(
     val initialValue: PropertyValue? = null,
     val tags: Map<String, String> = emptyMap(),
     val coding: Coding? = null,
+    val ordinal: Int = -1,
     val lastUpdated: Instant = Clock.System.now(),
 ) {
     fun toDocument(): Document {
@@ -40,6 +41,7 @@ data class PropertyDocument(
             .append("description", description)
             .append("declaredType", declaredType)
             .append("tags", Document(tags))
+            .append("ordinal", ordinal)
             .append("lastUpdated", Date.from(lastUpdated.toJavaInstant()))
         if (initialValue != null) {
             doc.append(
@@ -61,6 +63,7 @@ data class PropertyDocument(
         initialValue = initialValue,
         tags = tags,
         coding = coding,
+        ordinal = ordinal,
     )
 
     companion object {
@@ -75,6 +78,7 @@ data class PropertyDocument(
                 initialValue = property.initialValue,
                 tags = property.tags,
                 coding = property.coding,
+                ordinal = property.ordinal,
             )
 
         fun fromDocument(doc: Document): PropertyDocument? {
@@ -86,6 +90,7 @@ data class PropertyDocument(
             val declaredType = doc.getString("declaredType") ?: return null
             val tagsDoc = doc.get("tags", Document::class.java)
             val tags = tagsDoc?.entries?.associate { it.key to it.value.toString() } ?: emptyMap()
+            val ordinal = doc.getInteger("ordinal") ?: -1
             val lastUpdated = doc.getDate("lastUpdated")?.toInstant()?.toKotlinInstant() ?: Clock.System.now()
             val initialValueDoc = doc.get("initialValue", Document::class.java)
             val initialValue = initialValueDoc?.get("value")?.toPropertyValue()
@@ -105,6 +110,7 @@ data class PropertyDocument(
                 initialValue = initialValue,
                 tags = tags,
                 coding = coding,
+                ordinal = ordinal,
                 lastUpdated = lastUpdated,
             )
         }
