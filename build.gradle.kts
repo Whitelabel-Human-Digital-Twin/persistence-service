@@ -61,8 +61,8 @@ dependencies {
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.10.0")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 
-    implementation("io.github.ktwinx:ktwinx-core:0.9.0")
-    implementation("io.github.ktwinx:ktwinx-distributed:0.9.0")
+    implementation("io.github.ktwinx:ktwinx-core:0.10.0")
+    implementation("io.github.ktwinx:ktwinx-distributed:0.10.0")
 }
 
 tasks.withType<Test> {

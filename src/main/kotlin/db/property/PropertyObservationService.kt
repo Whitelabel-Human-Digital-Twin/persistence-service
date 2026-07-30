@@ -42,7 +42,10 @@ import java.time.Instant
 import java.util.*
 import kotlin.time.toKotlinInstant
 
-class PropertyObservationService(val db: MongoDatabase) {
+class PropertyObservationService(
+    val db: MongoDatabase,
+    private val propertyService: PropertyService = PropertyService(db),
+) {
     var collection: MongoCollection<Document>
 
     init {
@@ -353,6 +356,7 @@ class PropertyObservationService(val db: MongoDatabase) {
     ): ComparisonSearchResult = withContext(Dispatchers.IO) {
         val propertyNames = propertyComparisons.map { it.propertyName.value }.distinct()
         val matchedIds = matchedHdtIds(propertyComparisons, modelNames, from, to, metadataFilters)
+        val propertyOrder = propertyService.canonicalPropertyOrder()
 
         val matches = if (matchedIds.isEmpty()) {
             emptyList()
@@ -411,7 +415,7 @@ class PropertyObservationService(val db: MongoDatabase) {
             collection.aggregate(populationPipeline)
                 .mapNotNull { PropertyPopulationStats.fromDocument(it) }
                 .toList()
-                .sortedBy { it.propertyName.value }
+                .sortedWith(compareBy(propertyOrderComparator(propertyOrder)) { it.propertyName })
         }
 
         ComparisonSearchResult(matches = matches, populationStats = populationStats)
@@ -440,6 +444,8 @@ class PropertyObservationService(val db: MongoDatabase) {
         if (matchedIds.isEmpty()) {
             return@withContext CohortResult(rows = emptyList(), populationStats = emptyList())
         }
+        val propertyOrder = propertyService.canonicalPropertyOrder()
+        val propertyComparator = propertyOrderComparator(propertyOrder)
 
         val filters = mutableListOf<Bson>(`in`("metaField.hdtId", matchedIds.map { it.id }))
         filters += baseMatch(from = from, to = to)
@@ -519,12 +525,12 @@ class PropertyObservationService(val db: MongoDatabase) {
         }
 
         val rows = cellsByHdt.map { (hdtId, cells) ->
-            CohortRow(hdtId = HdtId(hdtId), properties = cells.sortedBy { it.propertyName.value })
+            CohortRow(hdtId = HdtId(hdtId), properties = cells.sortedWith(compareBy(propertyComparator) { it.propertyName }))
         }.sortedBy { it.hdtId.id }
 
         val populationStats = populationDocs
             .mapNotNull { PropertyPopulationStats.fromDocument(it) }
-            .sortedBy { it.propertyName.value }
+            .sortedWith(compareBy(propertyComparator) { it.propertyName })
 
         CohortResult(rows = rows, populationStats = populationStats)
     }

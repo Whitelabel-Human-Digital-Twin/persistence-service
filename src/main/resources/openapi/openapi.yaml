@@ -1194,6 +1194,8 @@ components:
         coding:
           $ref: '#/components/schemas/Coding'
           nullable: true
+        ordinal:
+          type: integer
         lastUpdated:
           type: string
           format: date-time
@@ -1374,6 +1376,8 @@ components:
         coding:
           $ref: '#/components/schemas/Coding'
           nullable: true
+        ordinal:
+          type: integer
     PropertySpecEntry:
       type: object
       title: io.github.whdt.db.assembler.PropertySpecEntry
@@ -1401,6 +1405,8 @@ components:
         coding:
           $ref: '#/components/schemas/Coding'
           nullable: true
+        ordinal:
+          type: integer
     ModelSpecEntry:
       type: object
       title: io.github.whdt.db.assembler.ModelSpecEntry

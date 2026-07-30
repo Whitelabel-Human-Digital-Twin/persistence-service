@@ -126,4 +126,34 @@ class PropertyDocumentToPropertyTest {
         assertEquals(original.tags, restored.tags)
         assertEquals(original.coding, restored.coding)
     }
+
+    @Test
+    fun `toProperty preserves ordinal`() {
+        val doc = PropertyDocument(
+            hdtId = hdtId,
+            modelId = ModelId("m"),
+            propertyId = io.github.ktwinx.core.hdt.model.property.PropertyId("p"),
+            propertyName = io.github.ktwinx.core.hdt.model.property.PropertyName("weight"),
+            description = "Body weight",
+            declaredType = "FLOAT",
+            ordinal = 3,
+        )
+        assertEquals(3, doc.toProperty().ordinal)
+    }
+
+    @Test
+    fun `fromktwinxProperty preserves ordinal`() {
+        val original = Property(
+            modelId = ModelId("model-roundtrip"),
+            name = io.github.ktwinx.core.hdt.model.property.PropertyName("pulse"),
+            description = PropertyDescription("Heart pulse rate"),
+            declaredType = PropertyValueType.INT,
+            ordinal = 5,
+        )
+
+        val doc = PropertyDocument.fromktwinxProperty(hdtId, original)
+
+        assertEquals(5, doc.ordinal)
+        assertEquals(5, doc.toProperty().ordinal)
+    }
 }
