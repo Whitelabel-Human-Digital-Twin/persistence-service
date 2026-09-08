@@ -1,6 +1,7 @@
 package routing.query.event.comparison.dto
 
 import io.github.ktwinx.core.hdt.model.ModelName
+import routing.query.availability.ModelPresenceFilterDto
 import routing.query.event.comparison.ComparisonOperator
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
@@ -21,4 +22,6 @@ data class PropertiesByComparisonsRequestDto(
     val to: Instant? = null,
     /** Conjunction of `$in` predicates over `metadata.<key>`; absent/empty = no filter. */
     val metadataFilters: Map<String, List<String>>? = null,
+    /** DT-level model presence requirements, conjunctively applied to the matched set. */
+    val modelPresence: List<ModelPresenceFilterDto>? = null,
 )

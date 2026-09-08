@@ -2,6 +2,7 @@ package routing.query.event
 
 import MongoIntegrationTest
 import configureSerialization
+import db.hdt.HdtService
 import db.property.PropertyObservationDocument
 import db.property.PropertyObservationService
 import io.github.ktwinx.core.hdt.HdtId
@@ -34,10 +35,12 @@ import kotlin.time.Instant
 class ObservationQueryRoutesTest : MongoIntegrationTest() {
 
     private lateinit var observationService: PropertyObservationService
+    private lateinit var hdtService: HdtService
 
     @BeforeAll
     fun setup() {
         observationService = PropertyObservationService(database)
+        hdtService = HdtService(database)
 
         // Seed observations for query tests
         val ts = Instant.parse("2026-01-15T10:00:00Z")
@@ -139,7 +142,7 @@ class ObservationQueryRoutesTest : MongoIntegrationTest() {
     fun `POST query event comparison returns 200`() = testApplication {
         application {
             configureSerialization()
-            routing { propertyComparisonRoutes(observationService) }
+            routing { propertyComparisonRoutes(observationService, hdtService) }
         }
         val response = client.post("/query/event/comparison") {
             contentType(ContentType.Application.Json)
@@ -158,7 +161,7 @@ class ObservationQueryRoutesTest : MongoIntegrationTest() {
     fun `POST query cohort returns 200`() = testApplication {
         application {
             configureSerialization()
-            routing { cohortRoutes(observationService) }
+            routing { cohortRoutes(observationService, hdtService) }
         }
         val response = client.post("/query/cohort") {
             contentType(ContentType.Application.Json)
@@ -178,7 +181,7 @@ class ObservationQueryRoutesTest : MongoIntegrationTest() {
     fun `POST query cohort with a same-property range excludes a DT with no single observation inside the interval`() = testApplication {
         application {
             configureSerialization()
-            routing { cohortRoutes(observationService) }
+            routing { cohortRoutes(observationService, hdtService) }
         }
         // query-hdt's readings are 36.6 and 37.1 -- both satisfy `temperature < 40` individually
         // (which the pre-fix OR-based gate would accept), but neither satisfies

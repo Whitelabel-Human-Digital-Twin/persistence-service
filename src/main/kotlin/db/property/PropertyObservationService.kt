@@ -37,9 +37,12 @@ import routing.query.event.stats.PropertyStatsPerHdt
 import routing.query.availability.HdtModelAvailability
 import routing.query.availability.ModelAvailability
 import routing.query.availability.ModelMatchMode
+import routing.query.availability.ModelPresenceFilterDto
+import routing.query.availability.ModelPresenceMode
 import io.github.ktwinx.core.hdt.model.property.toPropertyValue
 import java.time.Instant
 import java.util.*
+import kotlin.time.toJavaInstant
 import kotlin.time.toKotlinInstant
 
 class PropertyObservationService(
@@ -317,10 +320,46 @@ class PropertyObservationService(
         return filters
     }
 
+    private data class PresenceScope(
+        val metadataFilters: Map<String, List<String>>?,
+        val from: Instant?,
+        val to: Instant?,
+    )
+
+    /**
+     * Applies [presence] filters conjunctively to [candidates]. HAS retains candidates present in
+     * `hdtIdsByModel[modelName]`; HAS_NOT removes them. Filters sharing an identical scope
+     * (metadataFilters/from/to) are resolved in one [hdtIdsByModel] call over the union of their
+     * model names; filters with differing scopes require one call per distinct scope.
+     */
+    private suspend fun applyPresenceGate(
+        candidates: List<HdtId>,
+        presence: List<ModelPresenceFilterDto>,
+    ): List<HdtId> {
+        if (presence.isEmpty() || candidates.isEmpty()) return candidates
+        var remaining = candidates.toSet()
+        val byScope = presence.groupBy {
+            PresenceScope(it.metadataFilters, it.from?.toJavaInstant(), it.to?.toJavaInstant())
+        }
+        for ((scope, filters) in byScope) {
+            val modelNames = filters.map { it.modelName }.distinct()
+            val idsByModel = hdtIdsByModel(modelNames, scope.metadataFilters, scope.from, scope.to)
+            for (filter in filters) {
+                val ids = idsByModel[filter.modelName].orEmpty()
+                remaining = when (filter.mode) {
+                    ModelPresenceMode.HAS -> remaining.intersect(ids)
+                    ModelPresenceMode.HAS_NOT -> remaining - ids
+                }
+            }
+        }
+        return candidates.filter { it in remaining }
+    }
+
     /**
      * The comparison-matching gate shared by [observationsByComparisonsAggregate] and [cohortExplore]:
      * a DT is "matched" only if it has at least one observation satisfying each compared property
-     * (comparison-OR match -> group by hdtId + addToSet(matchedProperties) -> match(all(matchedProperties))).
+     * (comparison-OR match -> group by hdtId + addToSet(matchedProperties) -> match(all(matchedProperties))),
+     * further narrowed by [modelPresence] requirements.
      */
     private suspend fun matchedHdtIds(
         comparisons: List<PropertyComparison>,
@@ -328,23 +367,32 @@ class PropertyObservationService(
         from: Instant? = null,
         to: Instant? = null,
         metadataFilters: Map<String, List<String>>? = null,
+        modelPresence: List<ModelPresenceFilterDto>? = null,
+        universe: List<HdtId>? = null,
     ): List<HdtId> = withContext(Dispatchers.IO) {
-        val propertyNames = comparisons.map { it.propertyName.value }.distinct()
-        val comparisonFilter = buildComparisonGroupFilter(comparisons)
-        val finalMatch = and(comparisonGateOuterFilters(modelNames, from, to, metadataFilters) + comparisonFilter)
-        val pipeline = listOf(
-            match(finalMatch),
-            group(
-                "\$metaField.hdtId",
-                addToSet("matchedProperties", "\$metaField.propertyName")
-            ),
-            match(all("matchedProperties", propertyNames)),
-            project(fields(include("_id")))
-        )
-        collection.aggregate(pipeline)
-            .mapNotNull { it.getString("_id") }
-            .toList()
-            .map { HdtId(it) }
+        val candidates = if (comparisons.isEmpty()) {
+            universe ?: throw IllegalArgumentException(
+                "universe is required when comparisons is empty"
+            )
+        } else {
+            val propertyNames = comparisons.map { it.propertyName.value }.distinct()
+            val comparisonFilter = buildComparisonGroupFilter(comparisons)
+            val finalMatch = and(comparisonGateOuterFilters(modelNames, from, to, metadataFilters) + comparisonFilter)
+            val pipeline = listOf(
+                match(finalMatch),
+                group(
+                    "\$metaField.hdtId",
+                    addToSet("matchedProperties", "\$metaField.propertyName")
+                ),
+                match(all("matchedProperties", propertyNames)),
+                project(fields(include("_id")))
+            )
+            collection.aggregate(pipeline)
+                .mapNotNull { it.getString("_id") }
+                .toList()
+                .map { HdtId(it) }
+        }
+        if (modelPresence.isNullOrEmpty()) candidates else applyPresenceGate(candidates, modelPresence)
     }
 
     suspend fun observationsByComparisonsAggregate(
@@ -353,13 +401,16 @@ class PropertyObservationService(
         from: Instant? = null,
         to: Instant? = null,
         metadataFilters: Map<String, List<String>>? = null,
+        modelPresence: List<ModelPresenceFilterDto>? = null,
+        universe: List<HdtId>? = null,
     ): ComparisonSearchResult = withContext(Dispatchers.IO) {
         val propertyNames = propertyComparisons.map { it.propertyName.value }.distinct()
-        val matchedIds = matchedHdtIds(propertyComparisons, modelNames, from, to, metadataFilters)
+        val matchedIds = matchedHdtIds(propertyComparisons, modelNames, from, to, metadataFilters, modelPresence, universe)
         val propertyOrder = propertyService.canonicalPropertyOrder()
 
-        val matches = if (matchedIds.isEmpty()) {
-            emptyList()
+        val matches = if (matchedIds.isEmpty() || propertyComparisons.isEmpty()) {
+            matchedIds.map { PropertiesByComparisonsAggregateResponse(it, emptyList(), emptyList()) }
+                .sortedBy { it.hdtId.id }
         } else {
             val comparisonFilter = buildComparisonGroupFilter(propertyComparisons)
             val finalMatch = and(
@@ -439,8 +490,10 @@ class PropertyObservationService(
         from: Instant? = null,
         to: Instant? = null,
         metadataFilters: Map<String, List<String>>? = null,
+        modelPresence: List<ModelPresenceFilterDto>? = null,
+        universe: List<HdtId>? = null,
     ): CohortResult = withContext(Dispatchers.IO) {
-        val matchedIds = matchedHdtIds(comparisons, modelNames, from, to, metadataFilters)
+        val matchedIds = matchedHdtIds(comparisons, modelNames, from, to, metadataFilters, modelPresence, universe)
         if (matchedIds.isEmpty()) {
             return@withContext CohortResult(rows = emptyList(), populationStats = emptyList())
         }
@@ -543,13 +596,24 @@ class PropertyObservationService(
      * derives from `modelId.value.split(":").last()` rather than from `observation.modelName`. That
      * derivation is fragile but out of scope here -- see the migration note on that function.
      */
-    suspend fun hdtsByModel(
+    private data class HdtModelRow(
+        val hdtId: String,
+        val modelName: String,
+        val observationCount: Long,
+        val firstTimestamp: kotlin.time.Instant,
+        val lastTimestamp: kotlin.time.Instant,
+    )
+
+    /**
+     * One row per `{hdtId, modelName}` pair having at least one observation under the given scope,
+     * with per-pair count/first/last timestamps. Shared by [hdtsByModel] and [hdtIdsByModel].
+     */
+    private suspend fun hdtModelRows(
         modelNames: List<ModelName>?,
-        match: ModelMatchMode,
         metadataFilters: Map<String, List<String>>?,
         from: Instant?,
         to: Instant?,
-    ): List<HdtModelAvailability> = withContext(Dispatchers.IO) {
+    ): List<HdtModelRow> = withContext(Dispatchers.IO) {
         val filters = mutableListOf<Bson>(baseMatch(from = from, to = to))
         if (!modelNames.isNullOrEmpty())
             filters += `in`("metaField.modelName", modelNames.map { it.value })
@@ -557,7 +621,7 @@ class PropertyObservationService(
 
         val perHdtModelId = Document("hdtId", "\$metaField.hdtId").append("modelName", "\$metaField.modelName")
 
-        val pipeline = mutableListOf(
+        val pipeline = listOf(
             match(and(filters)),
             group(
                 perHdtModelId,
@@ -565,37 +629,52 @@ class PropertyObservationService(
                 Accumulators.min("firstTimestamp", "\$timeField"),
                 Accumulators.max("lastTimestamp", "\$timeField"),
             ),
-            group(
-                "\$_id.hdtId",
-                push(
-                    "models",
-                    Document()
-                        .append("modelName", "\$_id.modelName")
-                        .append("observationCount", "\$observationCount")
-                        .append("firstTimestamp", "\$firstTimestamp")
-                        .append("lastTimestamp", "\$lastTimestamp")
-                )
-            ),
         )
-        if (match == ModelMatchMode.ALL && !modelNames.isNullOrEmpty()) {
-            pipeline += match(
-                expr(Document("\$eq", listOf(Document("\$size", "\$models"), modelNames.distinct().size)))
-            )
-        }
-        pipeline += sort(Sorts.ascending("_id"))
-
         collection.aggregate(pipeline)
             .mapNotNull { doc ->
-                val hdtId = doc.getString("_id") ?: return@mapNotNull null
-                val models = doc.getList("models", Document::class.java).orEmpty().mapNotNull { m ->
-                    val modelName = m.getString("modelName") ?: return@mapNotNull null
-                    val count = (m["observationCount"] as? Number)?.toLong() ?: return@mapNotNull null
-                    val first = m.getDate("firstTimestamp")?.toInstant()?.toKotlinInstant() ?: return@mapNotNull null
-                    val last = m.getDate("lastTimestamp")?.toInstant()?.toKotlinInstant() ?: return@mapNotNull null
-                    ModelAvailability(ModelName(modelName), count, first, last)
-                }
-                HdtModelAvailability(HdtId(hdtId), models)
+                val id = doc.get("_id", Document::class.java) ?: return@mapNotNull null
+                val hdtId = id.getString("hdtId") ?: return@mapNotNull null
+                val modelName = id.getString("modelName") ?: return@mapNotNull null
+                val count = (doc["observationCount"] as? Number)?.toLong() ?: return@mapNotNull null
+                val first = doc.getDate("firstTimestamp")?.toInstant()?.toKotlinInstant() ?: return@mapNotNull null
+                val last = doc.getDate("lastTimestamp")?.toInstant()?.toKotlinInstant() ?: return@mapNotNull null
+                HdtModelRow(hdtId, modelName, count, first, last)
             }
             .toList()
+    }
+
+    /**
+     * DT ids owning at least one observation, per model name, under the given scope.
+     * Shared by [hdtsByModel] and the presence gate in [matchedHdtIds].
+     */
+    private suspend fun hdtIdsByModel(
+        modelNames: List<ModelName>?,
+        metadataFilters: Map<String, List<String>>?,
+        from: Instant?,
+        to: Instant?,
+    ): Map<ModelName, Set<HdtId>> =
+        hdtModelRows(modelNames, metadataFilters, from, to)
+            .groupBy({ ModelName(it.modelName) }, { HdtId(it.hdtId) })
+            .mapValues { it.value.toSet() }
+
+    suspend fun hdtsByModel(
+        modelNames: List<ModelName>?,
+        match: ModelMatchMode,
+        metadataFilters: Map<String, List<String>>?,
+        from: Instant?,
+        to: Instant?,
+    ): List<HdtModelAvailability> = withContext(Dispatchers.IO) {
+        val rows = hdtModelRows(modelNames, metadataFilters, from, to)
+        var result = rows.groupBy { it.hdtId }.map { (hdtId, hdtRows) ->
+            HdtModelAvailability(
+                HdtId(hdtId),
+                hdtRows.map { r -> ModelAvailability(ModelName(r.modelName), r.observationCount, r.firstTimestamp, r.lastTimestamp) }
+            )
+        }
+        if (match == ModelMatchMode.ALL && !modelNames.isNullOrEmpty()) {
+            val distinctCount = modelNames.distinct().size
+            result = result.filter { it.models.size == distinctCount }
+        }
+        result.sortedBy { it.hdtId.id }
     }
 }
