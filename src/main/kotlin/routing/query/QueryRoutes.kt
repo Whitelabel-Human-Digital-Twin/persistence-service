@@ -1,5 +1,6 @@
 package routing.query
 
+import db.hdt.HdtService
 import db.property.PropertyObservationService
 import db.property.PropertyService
 import routing.query.availability.availabilityRoutes
@@ -13,11 +14,12 @@ import io.ktor.server.routing.*
 fun Route.queryRoutes(
     propertyEventService: PropertyObservationService,
     propertyService: PropertyService,
+    hdtService: HdtService,
 ) {
     propertyValuesRoutes(propertyEventService)
     propertyStatsRoutes(propertyEventService)
-    propertyComparisonRoutes(propertyEventService)
-    cohortRoutes(propertyEventService)
+    propertyComparisonRoutes(propertyEventService, hdtService)
+    cohortRoutes(propertyEventService, hdtService)
     availabilityRoutes(propertyEventService)
     route("/query") {
         propertyQueryRoutes(propertyService)
