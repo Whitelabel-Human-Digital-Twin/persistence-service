@@ -129,4 +129,58 @@ class ModelPresenceRoutesTest : MongoIntegrationTest() {
         }
         assertEquals(HttpStatusCode.BadRequest, response.status)
     }
+
+    @Test
+    fun `POST query event comparison with a task key in metadataFilters returns 400 naming taskScope`() = testApplication {
+        application {
+            configureSerialization()
+            routing { propertyComparisonRoutes(observationService, hdtService) }
+        }
+        val response = client.post("/query/event/comparison") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"comparisons":[],"modelPresence":[{"modelName":"acc","mode":"HAS"}],"metadataFilters":{"task":["NW"]}}""")
+        }
+        assertEquals(HttpStatusCode.BadRequest, response.status)
+        assertTrue(response.bodyAsText().contains("taskScope"), "error message must point at taskScope")
+    }
+
+    @Test
+    fun `POST query event comparison with taskScope returns 200`() = testApplication {
+        application {
+            configureSerialization()
+            routing { propertyComparisonRoutes(observationService, hdtService) }
+        }
+        val response = client.post("/query/event/comparison") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"comparisons":[],"modelPresence":[{"modelName":"acc","mode":"HAS"}],"taskScope":["NW"]}""")
+        }
+        assertEquals(HttpStatusCode.OK, response.status)
+    }
+
+    @Test
+    fun `POST query cohort with a task key in metadataFilters returns 400 naming taskScope`() = testApplication {
+        application {
+            configureSerialization()
+            routing { cohortRoutes(observationService, hdtService) }
+        }
+        val response = client.post("/query/cohort") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"comparisons":[],"modelPresence":[{"modelName":"acc","mode":"HAS"}],"metadataFilters":{"task":["NW"]}}""")
+        }
+        assertEquals(HttpStatusCode.BadRequest, response.status)
+        assertTrue(response.bodyAsText().contains("taskScope"), "error message must point at taskScope")
+    }
+
+    @Test
+    fun `POST query cohort with taskScope returns 200`() = testApplication {
+        application {
+            configureSerialization()
+            routing { cohortRoutes(observationService, hdtService) }
+        }
+        val response = client.post("/query/cohort") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"comparisons":[],"modelPresence":[{"modelName":"acc","mode":"HAS"}],"taskScope":["NW"]}""")
+        }
+        assertEquals(HttpStatusCode.OK, response.status)
+    }
 }

@@ -14,8 +14,10 @@ data class HdtsByModelRequestDto(
     val modelNames: List<ModelName>? = null,
     /** Ignored when [modelNames] is null or empty. */
     val match: ModelMatchMode = ModelMatchMode.ANY,
-    /** Conjunctive `$in`-per-key over observation `metadata`, same idiom as /query/cohort. */
+    /** Conjunctive `$in`-per-key over observation `metadata`, same idiom as /query/cohort. Must not contain a `task` key -- use [taskScope] instead. */
     val metadataFilters: Map<String, List<String>>? = null,
+    /** Restricts observation acquisition scope to these `task` values; applied wherever observations are matched. Null/empty means "every task". */
+    val taskScope: List<String>? = null,
     val from: Instant? = null,
     val to: Instant? = null,
 )

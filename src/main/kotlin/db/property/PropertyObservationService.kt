@@ -42,7 +42,6 @@ import routing.query.availability.ModelPresenceMode
 import io.github.ktwinx.core.hdt.model.property.toPropertyValue
 import java.time.Instant
 import java.util.*
-import kotlin.time.toJavaInstant
 import kotlin.time.toKotlinInstant
 
 class PropertyObservationService(
@@ -312,44 +311,49 @@ class PropertyObservationService(
         from: Instant?,
         to: Instant?,
         metadataFilters: Map<String, List<String>>? = null,
+        taskScope: List<String>? = null,
     ): MutableList<Bson> {
         val filters = mutableListOf(baseMatch(from = from, to = to))
         if (!modelNames.isNullOrEmpty())
             filters += `in`("metaField.modelName", modelNames.map { it.value })
         metadataFilters?.toMetadataBson()?.let { filters += it }
+        taskScopeBson(taskScope)?.let { filters += it }
         return filters
     }
 
-    private data class PresenceScope(
-        val metadataFilters: Map<String, List<String>>?,
-        val from: Instant?,
-        val to: Instant?,
-    )
+    /**
+     * Applied wherever observations are filtered -- aggregation and presence alike.
+     *
+     * Strict: an observation with no `task` key is OUT of scope. Every observation in the
+     * database is expected to carry `task`, so there is nothing for a relaxed clause to rescue.
+     * The consequence is deliberate: should an unscoped observation ever be written, a
+     * task-scoped query will silently exclude it rather than silently include it. Fail closed.
+     */
+    private fun taskScopeBson(taskScope: List<String>?): Bson? =
+        taskScope?.takeIf { it.isNotEmpty() }?.let { tasks ->
+            `in`("metadata.task", tasks)
+        }
 
     /**
      * Applies [presence] filters conjunctively to [candidates]. HAS retains candidates present in
-     * `hdtIdsByModel[modelName]`; HAS_NOT removes them. Filters sharing an identical scope
-     * (metadataFilters/from/to) are resolved in one [hdtIdsByModel] call over the union of their
-     * model names; filters with differing scopes require one call per distinct scope.
+     * `hdtIdsByModel[modelName]`; HAS_NOT removes them. Presence filters no longer carry their own
+     * scope -- they all share the enclosing query's [taskScope], so one [hdtIdsByModel] call over
+     * the union of their model names covers every filter in the request.
      */
     private suspend fun applyPresenceGate(
         candidates: List<HdtId>,
         presence: List<ModelPresenceFilterDto>,
+        taskScope: List<String>?,
     ): List<HdtId> {
         if (presence.isEmpty() || candidates.isEmpty()) return candidates
         var remaining = candidates.toSet()
-        val byScope = presence.groupBy {
-            PresenceScope(it.metadataFilters, it.from?.toJavaInstant(), it.to?.toJavaInstant())
-        }
-        for ((scope, filters) in byScope) {
-            val modelNames = filters.map { it.modelName }.distinct()
-            val idsByModel = hdtIdsByModel(modelNames, scope.metadataFilters, scope.from, scope.to)
-            for (filter in filters) {
-                val ids = idsByModel[filter.modelName].orEmpty()
-                remaining = when (filter.mode) {
-                    ModelPresenceMode.HAS -> remaining.intersect(ids)
-                    ModelPresenceMode.HAS_NOT -> remaining - ids
-                }
+        val modelNames = presence.map { it.modelName }.distinct()
+        val idsByModel = hdtIdsByModel(modelNames, null, taskScope, null, null)
+        for (filter in presence) {
+            val ids = idsByModel[filter.modelName].orEmpty()
+            remaining = when (filter.mode) {
+                ModelPresenceMode.HAS -> remaining.intersect(ids)
+                ModelPresenceMode.HAS_NOT -> remaining - ids
             }
         }
         return candidates.filter { it in remaining }
@@ -369,6 +373,7 @@ class PropertyObservationService(
         metadataFilters: Map<String, List<String>>? = null,
         modelPresence: List<ModelPresenceFilterDto>? = null,
         universe: List<HdtId>? = null,
+        taskScope: List<String>? = null,
     ): List<HdtId> = withContext(Dispatchers.IO) {
         val candidates = if (comparisons.isEmpty()) {
             universe ?: throw IllegalArgumentException(
@@ -377,7 +382,7 @@ class PropertyObservationService(
         } else {
             val propertyNames = comparisons.map { it.propertyName.value }.distinct()
             val comparisonFilter = buildComparisonGroupFilter(comparisons)
-            val finalMatch = and(comparisonGateOuterFilters(modelNames, from, to, metadataFilters) + comparisonFilter)
+            val finalMatch = and(comparisonGateOuterFilters(modelNames, from, to, metadataFilters, taskScope) + comparisonFilter)
             val pipeline = listOf(
                 match(finalMatch),
                 group(
@@ -392,7 +397,7 @@ class PropertyObservationService(
                 .toList()
                 .map { HdtId(it) }
         }
-        if (modelPresence.isNullOrEmpty()) candidates else applyPresenceGate(candidates, modelPresence)
+        if (modelPresence.isNullOrEmpty()) candidates else applyPresenceGate(candidates, modelPresence, taskScope)
     }
 
     suspend fun observationsByComparisonsAggregate(
@@ -403,9 +408,10 @@ class PropertyObservationService(
         metadataFilters: Map<String, List<String>>? = null,
         modelPresence: List<ModelPresenceFilterDto>? = null,
         universe: List<HdtId>? = null,
+        taskScope: List<String>? = null,
     ): ComparisonSearchResult = withContext(Dispatchers.IO) {
         val propertyNames = propertyComparisons.map { it.propertyName.value }.distinct()
-        val matchedIds = matchedHdtIds(propertyComparisons, modelNames, from, to, metadataFilters, modelPresence, universe)
+        val matchedIds = matchedHdtIds(propertyComparisons, modelNames, from, to, metadataFilters, modelPresence, universe, taskScope)
         val propertyOrder = propertyService.canonicalPropertyOrder()
 
         val matches = if (matchedIds.isEmpty() || propertyComparisons.isEmpty()) {
@@ -414,7 +420,7 @@ class PropertyObservationService(
         } else {
             val comparisonFilter = buildComparisonGroupFilter(propertyComparisons)
             val finalMatch = and(
-                comparisonGateOuterFilters(modelNames, from, to, metadataFilters) +
+                comparisonGateOuterFilters(modelNames, from, to, metadataFilters, taskScope) +
                     comparisonFilter +
                     `in`("metaField.hdtId", matchedIds.map { it.id })
             )
@@ -451,6 +457,7 @@ class PropertyObservationService(
             if (!modelNames.isNullOrEmpty())
                 populationFilters += `in`("metaField.modelName", modelNames.map { it.value })
             metadataFilters?.toMetadataBson()?.let { populationFilters += it }
+            taskScopeBson(taskScope)?.let { populationFilters += it }
 
             val populationPipeline = listOf(
                 match(and(populationFilters)),
@@ -492,8 +499,9 @@ class PropertyObservationService(
         metadataFilters: Map<String, List<String>>? = null,
         modelPresence: List<ModelPresenceFilterDto>? = null,
         universe: List<HdtId>? = null,
+        taskScope: List<String>? = null,
     ): CohortResult = withContext(Dispatchers.IO) {
-        val matchedIds = matchedHdtIds(comparisons, modelNames, from, to, metadataFilters, modelPresence, universe)
+        val matchedIds = matchedHdtIds(comparisons, modelNames, from, to, metadataFilters, modelPresence, universe, taskScope)
         if (matchedIds.isEmpty()) {
             return@withContext CohortResult(rows = emptyList(), populationStats = emptyList())
         }
@@ -505,6 +513,7 @@ class PropertyObservationService(
         if (!modelNames.isNullOrEmpty())
             filters += `in`("metaField.modelName", modelNames.map { it.value })
         metadataFilters?.toMetadataBson()?.let { filters += it }
+        taskScopeBson(taskScope)?.let { filters += it }
 
         // Stat accumulators (avg/min/max/percentile) are only meaningful for numeric values;
         // categorical properties still get a `value` (via $top below) but no stats.
@@ -611,6 +620,7 @@ class PropertyObservationService(
     private suspend fun hdtModelRows(
         modelNames: List<ModelName>?,
         metadataFilters: Map<String, List<String>>?,
+        taskScope: List<String>?,
         from: Instant?,
         to: Instant?,
     ): List<HdtModelRow> = withContext(Dispatchers.IO) {
@@ -618,6 +628,7 @@ class PropertyObservationService(
         if (!modelNames.isNullOrEmpty())
             filters += `in`("metaField.modelName", modelNames.map { it.value })
         metadataFilters?.toMetadataBson()?.let { filters += it }
+        taskScopeBson(taskScope)?.let { filters += it }
 
         val perHdtModelId = Document("hdtId", "\$metaField.hdtId").append("modelName", "\$metaField.modelName")
 
@@ -650,10 +661,11 @@ class PropertyObservationService(
     private suspend fun hdtIdsByModel(
         modelNames: List<ModelName>?,
         metadataFilters: Map<String, List<String>>?,
+        taskScope: List<String>?,
         from: Instant?,
         to: Instant?,
     ): Map<ModelName, Set<HdtId>> =
-        hdtModelRows(modelNames, metadataFilters, from, to)
+        hdtModelRows(modelNames, metadataFilters, taskScope, from, to)
             .groupBy({ ModelName(it.modelName) }, { HdtId(it.hdtId) })
             .mapValues { it.value.toSet() }
 
@@ -661,10 +673,11 @@ class PropertyObservationService(
         modelNames: List<ModelName>?,
         match: ModelMatchMode,
         metadataFilters: Map<String, List<String>>?,
+        taskScope: List<String>?,
         from: Instant?,
         to: Instant?,
     ): List<HdtModelAvailability> = withContext(Dispatchers.IO) {
-        val rows = hdtModelRows(modelNames, metadataFilters, from, to)
+        val rows = hdtModelRows(modelNames, metadataFilters, taskScope, from, to)
         var result = rows.groupBy { it.hdtId }.map { (hdtId, hdtRows) ->
             HdtModelAvailability(
                 HdtId(hdtId),
