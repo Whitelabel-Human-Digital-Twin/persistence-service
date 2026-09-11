@@ -17,11 +17,8 @@ import routing.query.event.comparison.ComparisonOperator
 import routing.query.event.comparison.PropertyComparison
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
-import kotlin.time.toJavaInstant
 
 class PropertyObservationServicePresenceTest : MongoIntegrationTest() {
 
@@ -79,14 +76,15 @@ class PropertyObservationServicePresenceTest : MongoIntegrationTest() {
         // hdt-p-d: no observations at all (added to universe manually, not inserted)
 
         // --- Group 2: independent scoping (step 4) ---
-        // All three have p2 passing, with sex=F metadata; acc observations carry only "task".
+        // All three have p2 passing (task=nw, so taskScope=["nw"] keeps them as candidates) with
+        // sex=F metadata; acc observations vary by task, exercising the presence-side taskScope gate.
         val gTs = ts.plus(1000.seconds)
         val iTs = ts.plus(2000.seconds)
-        observations += property("hdt-p-g", "p2", 100.0, metadata = mapOf("sex" to "F"))
+        observations += property("hdt-p-g", "p2", 100.0, metadata = mapOf("sex" to "F", "task" to "nw"))
         observations += sensor("hdt-p-g", "acc", gTs, metadata = mapOf("task" to "nw"))
-        observations += property("hdt-p-h", "p2", 100.0, metadata = mapOf("sex" to "F"))
+        observations += property("hdt-p-h", "p2", 100.0, metadata = mapOf("sex" to "F", "task" to "nw"))
         observations += sensor("hdt-p-h", "acc", gTs, metadata = mapOf("task" to "tug"))
-        observations += property("hdt-p-i", "p2", 100.0, metadata = mapOf("sex" to "F"))
+        observations += property("hdt-p-i", "p2", 100.0, metadata = mapOf("sex" to "F", "task" to "nw"))
         observations += sensor("hdt-p-i", "acc", iTs, metadata = mapOf("task" to "nw"))
 
         // --- Group 3: multiple filters, conjunctive + scope batching (step 5) ---
@@ -145,42 +143,15 @@ class PropertyObservationServicePresenceTest : MongoIntegrationTest() {
     }
 
     @Test
-    fun `presence own metadataFilters excludes a twin whose acc observations carry a different value`() = runBlocking {
+    fun `taskScope excludes a twin whose acc observations carry a different task, applied to both aggregation and presence`() = runBlocking {
         val result = service.cohortExplore(
             comparisons = p2Comparisons,
-            modelPresence = listOf(
-                ModelPresenceFilterDto(
-                    ModelName("acc"),
-                    ModelPresenceMode.HAS,
-                    metadataFilters = mapOf("task" to listOf("nw")),
-                )
-            ),
+            taskScope = listOf("nw"),
+            modelPresence = listOf(ModelPresenceFilterDto(ModelName("acc"), ModelPresenceMode.HAS)),
         )
         val resultIds = result.rows.map { it.hdtId.id }.toSet()
         // hdt-p-h's only acc observation carries task=tug -- excluded despite otherwise qualifying.
         assertEquals(setOf("hdt-p-g", "hdt-p-i"), resultIds)
-    }
-
-    @Test
-    fun `presence own time window excludes a twin whose acc observations fall outside it, independent of the enclosing window`() = runBlocking {
-        val result = service.cohortExplore(
-            comparisons = p2Comparisons,
-            // enclosing window covers the p2 property timestamp (ts) but excludes every acc
-            // observation (at ts+1000s and ts+2000s) -- proving it has no bearing on presence.
-            from = ts.minus(10.seconds).toJavaInstant(),
-            to = ts.plus(10.seconds).toJavaInstant(),
-            modelPresence = listOf(
-                ModelPresenceFilterDto(
-                    ModelName("acc"),
-                    ModelPresenceMode.HAS,
-                    from = ts.plus(999.seconds),
-                    to = ts.plus(1001.seconds),
-                )
-            ),
-        )
-        val resultIds = result.rows.map { it.hdtId.id }.toSet()
-        assertTrue("hdt-p-g" in resultIds, "hdt-p-g's acc observation at ts+1000s falls inside the presence window")
-        assertFalse("hdt-p-i" in resultIds, "hdt-p-i's acc observation at ts+2000s falls outside the presence window")
     }
 
     @Test
@@ -196,7 +167,7 @@ class PropertyObservationServicePresenceTest : MongoIntegrationTest() {
     }
 
     @Test
-    fun `two HAS filters sharing an identical scope return the intersection`() = runBlocking {
+    fun `two HAS filters resolved in one shared call return the intersection`() = runBlocking {
         val result = service.observationsByComparisonsAggregate(
             propertyComparisons = p3Comparisons,
             modelPresence = listOf(

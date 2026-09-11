@@ -29,6 +29,7 @@ class PropertyObservationServiceAvailabilityTest : MongoIntegrationTest() {
         modelName: String,
         offsetSeconds: Long,
         task: String? = null,
+        side: String? = null,
     ) = PropertyObservation(
         hdtId = HdtId(hdtId),
         modelId = ModelId("$hdtId:$modelName"),
@@ -37,7 +38,10 @@ class PropertyObservationServiceAvailabilityTest : MongoIntegrationTest() {
         propertyName = PropertyName("value"),
         value = PropertyValue.DoublePropertyValue(1.0),
         timestamp = ts.plus(offsetSeconds.seconds),
-        metadata = if (task != null) mapOf("task" to task) else emptyMap(),
+        metadata = buildMap {
+            if (task != null) put("task", task)
+            if (side != null) put("side", side)
+        },
     )
 
     @BeforeAll
@@ -49,8 +53,8 @@ class PropertyObservationServiceAvailabilityTest : MongoIntegrationTest() {
             observation("hdt-avail-a", "acc", 0, task = "walking"),
             observation("hdt-avail-a", "acc", 1, task = "walking"),
             observation("hdt-avail-a", "acc", 2, task = "running"),
-            observation("hdt-avail-a", "gyro", 0),
-            observation("hdt-avail-a", "gyro", 1),
+            observation("hdt-avail-a", "gyro", 0, side = "left"),
+            observation("hdt-avail-a", "gyro", 1, side = "left"),
 
             // hdt-avail-b: acc only (x2, offsets 10/20), all "running"
             observation("hdt-avail-b", "acc", 10, task = "running"),
@@ -72,6 +76,7 @@ class PropertyObservationServiceAvailabilityTest : MongoIntegrationTest() {
             modelNames = listOf(ModelName("acc")),
             match = ModelMatchMode.ANY,
             metadataFilters = null,
+            taskScope = null,
             from = null,
             to = null,
         )
@@ -101,6 +106,7 @@ class PropertyObservationServiceAvailabilityTest : MongoIntegrationTest() {
             modelNames = null,
             match = ModelMatchMode.ANY,
             metadataFilters = null,
+            taskScope = null,
             from = null,
             to = null,
         )
@@ -117,6 +123,7 @@ class PropertyObservationServiceAvailabilityTest : MongoIntegrationTest() {
             modelNames = emptyList(),
             match = ModelMatchMode.ANY,
             metadataFilters = null,
+            taskScope = null,
             from = null,
             to = null,
         )
@@ -127,9 +134,25 @@ class PropertyObservationServiceAvailabilityTest : MongoIntegrationTest() {
     @Test
     fun `hdtsByModel metadataFilters narrows counts and excludes HDTs with no matching observation`() = runBlocking {
         val result = service.hdtsByModel(
+            modelNames = listOf(ModelName("gyro")),
+            match = ModelMatchMode.ANY,
+            metadataFilters = mapOf("side" to listOf("right")),
+            taskScope = null,
+            from = null,
+            to = null,
+        )
+
+        // hdt-avail-a's gyro observations all carry side=left -> excluded entirely
+        assertEquals(emptyList(), result.map { it.hdtId.id })
+    }
+
+    @Test
+    fun `hdtsByModel taskScope narrows counts and excludes HDTs with no matching observation`() = runBlocking {
+        val result = service.hdtsByModel(
             modelNames = listOf(ModelName("acc")),
             match = ModelMatchMode.ANY,
-            metadataFilters = mapOf("task" to listOf("walking")),
+            metadataFilters = null,
+            taskScope = listOf("walking"),
             from = null,
             to = null,
         )
@@ -148,6 +171,7 @@ class PropertyObservationServiceAvailabilityTest : MongoIntegrationTest() {
             modelNames = listOf(ModelName("acc")),
             match = ModelMatchMode.ANY,
             metadataFilters = null,
+            taskScope = null,
             from = ts.plus(1.seconds).toJavaInstant(),
             to = ts.plus(3.seconds).toJavaInstant(),
         )
@@ -166,6 +190,7 @@ class PropertyObservationServiceAvailabilityTest : MongoIntegrationTest() {
             modelNames = listOf(ModelName("acc"), ModelName("gyro")),
             match = ModelMatchMode.ALL,
             metadataFilters = null,
+            taskScope = null,
             from = null,
             to = null,
         )
@@ -180,6 +205,7 @@ class PropertyObservationServiceAvailabilityTest : MongoIntegrationTest() {
             modelNames = listOf(ModelName("acc"), ModelName("gyro")),
             match = ModelMatchMode.ANY,
             metadataFilters = null,
+            taskScope = null,
             from = null,
             to = null,
         )
@@ -193,6 +219,7 @@ class PropertyObservationServiceAvailabilityTest : MongoIntegrationTest() {
             modelNames = null,
             match = ModelMatchMode.ALL,
             metadataFilters = null,
+            taskScope = null,
             from = null,
             to = null,
         )

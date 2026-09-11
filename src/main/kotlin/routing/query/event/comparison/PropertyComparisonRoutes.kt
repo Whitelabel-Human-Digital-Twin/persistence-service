@@ -29,6 +29,13 @@ fun Route.propertyComparisonRoutes(
                 )
                 return@post
             }
+            if (req.metadataFilters?.containsKey("task") == true) {
+                call.respond(
+                    HttpStatusCode.BadRequest,
+                    "Filter on 'task' via the top-level 'taskScope' field, not via metadataFilters."
+                )
+                return@post
+            }
             val domainComparisons = req.comparisons.map { dto ->
                 val inferredType = inferPropertyType(dto.value)
 
@@ -43,6 +50,7 @@ fun Route.propertyComparisonRoutes(
                 req.metadataFilters,
                 req.modelPresence,
                 universe,
+                req.taskScope,
             )
             call.respond(HttpStatusCode.OK, stats)
         }.describe {

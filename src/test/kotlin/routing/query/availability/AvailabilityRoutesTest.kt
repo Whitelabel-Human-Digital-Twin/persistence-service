@@ -45,6 +45,26 @@ class AvailabilityRoutesTest : MongoIntegrationTest() {
                 timestamp = ts,
                 metadata = emptyMap(),
             ),
+            PropertyObservation(
+                hdtId = HdtId("route-avail-hdt"),
+                modelId = ModelId("route-avail-hdt:acc"),
+                modelName = ModelName("acc"),
+                propertyId = PropertyId("route-avail-hdt:acc:value"),
+                propertyName = PropertyName("value"),
+                value = PropertyValue.DoublePropertyValue(1.0),
+                timestamp = ts,
+                metadata = mapOf("task" to "NW"),
+            ),
+            PropertyObservation(
+                hdtId = HdtId("route-avail-hdt"),
+                modelId = ModelId("route-avail-hdt:acc"),
+                modelName = ModelName("acc"),
+                propertyId = PropertyId("route-avail-hdt:acc:value"),
+                propertyName = PropertyName("value"),
+                value = PropertyValue.DoublePropertyValue(1.0),
+                timestamp = ts,
+                metadata = mapOf("task" to "TUG"),
+            ),
         )
         observationService.insertMany(observations)
         Unit
@@ -81,5 +101,39 @@ class AvailabilityRoutesTest : MongoIntegrationTest() {
         }
         assertEquals(HttpStatusCode.OK, response.status)
         assertTrue(response.bodyAsText().contains("route-avail-hdt"))
+    }
+
+    @Test
+    fun `POST query hdts by-model with a task key in metadataFilters returns 400 naming taskScope`() = testApplication {
+        application {
+            configureSerialization()
+            routing { availabilityRoutes(observationService) }
+        }
+        val response = client.post("/query/hdts/by-model") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"modelNames":["acc"],"metadataFilters":{"task":["NW"]}}""")
+        }
+        assertEquals(HttpStatusCode.BadRequest, response.status)
+        assertTrue(response.bodyAsText().contains("taskScope"), "error message must point at taskScope")
+    }
+
+    @Test
+    fun `POST query hdts by-model with taskScope returns 200 with counts restricted to that task`() = testApplication {
+        application {
+            configureSerialization()
+            routing { availabilityRoutes(observationService) }
+        }
+        val response = client.post("/query/hdts/by-model") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"modelNames":["acc"],"taskScope":["NW"]}""")
+        }
+        assertEquals(HttpStatusCode.OK, response.status)
+        val body = response.bodyAsText()
+        assertTrue(body.contains("route-avail-hdt"))
+        // only the single NW-tagged acc observation should be counted, not all three seeded ones.
+        assertTrue(
+            Regex("\"observationCount\"\\s*:\\s*1\\b").containsMatchIn(body),
+            "expected observationCount restricted to 1 under taskScope=[NW], got: $body"
+        )
     }
 }

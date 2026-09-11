@@ -17,12 +17,20 @@ fun Route.availabilityRoutes(
     route("/query/hdts/by-model") {
         post {
             val req = call.receive<HdtsByModelRequestDto>()
+            if (req.metadataFilters?.containsKey("task") == true) {
+                call.respond(
+                    HttpStatusCode.BadRequest,
+                    "Filter on 'task' via the top-level 'taskScope' field, not via metadataFilters."
+                )
+                return@post
+            }
             val result = propertyEventService.hdtsByModel(
-                req.modelNames,
-                req.match,
-                req.metadataFilters,
-                req.from?.toJavaInstant(),
-                req.to?.toJavaInstant(),
+                modelNames = req.modelNames,
+                match = req.match,
+                metadataFilters = req.metadataFilters,
+                taskScope = req.taskScope,
+                from = req.from?.toJavaInstant(),
+                to = req.to?.toJavaInstant(),
             )
             call.respond(HttpStatusCode.OK, result)
         }.describe {
